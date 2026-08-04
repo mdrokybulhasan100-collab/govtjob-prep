@@ -74,28 +74,103 @@ Deploy হওয়ার পর যে URL পাবেন (যেমন `https
 Authentication → URL Configuration-এ **Site URL** ও **Redirect URLs**-এ যোগ করে দিন,
 নাহলে লাইভ সাইটে Google লগইন কাজ করবে না। একই কাজ Netlify দিয়েও করা যায়।
 
-## নিজের প্রশ্ন যোগ করা
+## নিজেকে Admin বানানো (Admin Panel ব্যবহার করতে)
 
-`schema.sql`-এ কয়েকটা নমুনা প্রশ্ন আছে শুধু টেস্ট করার জন্য। আসল প্রশ্ন যোগ করতে
-Supabase Dashboard-এর **Table Editor → questions** এ গিয়ে সরাসরি রো যোগ করতে পারেন,
-অথবা CSV import করতে পারেন। প্রতিটা প্রশ্নে `subject_id`, `topic_id` (ঐচ্ছিক),
-`exam_id` (ঐচ্ছিক — পূর্ববর্তী বছরের প্রশ্নপত্রের অংশ হলে) বসাতে হবে।
+Admin Panel এখন মূল অ্যাপের ভেতরে কোনো ট্যাব হিসেবে না — বরং **আলাদা URL**-এ থাকে:
+
+```
+https://your-app.vercel.app/admin
+```
+
+সাধারণ ইউজাররা এই লিংক জানলেও ভেতরে ঢুকতে পারবে না — Admin না হলে "এই পাতা শুধু
+Admin-দের জন্য" মেসেজ দেখাবে। Subject, Topic, Exam (পূর্ববর্তী বছরের প্রশ্নপত্র),
+Question যোগ/মুছা এবং প্রশ্ন **JSON দিয়ে bulk upload** — সবকিছু এখান থেকেই হয়।
+
+**নিজেকে Admin বানানোর ধাপ:**
+1. প্রথমে আপনার লাইভ সাইটে গিয়ে Gmail দিয়ে অন্তত একবার লগইন করুন (এতে আপনার প্রোফাইল রো তৈরি হবে)
+2. Supabase Dashboard → **SQL Editor** → **New query**
+3. এই রিপোর `admin_migration.sql` ফাইলের **পুরো কনটেন্ট** কপি-পেস্ট করে **Run** করুন
+   (এটা `is_admin` কলাম ও Admin-only write নিয়ম তৈরি করবে)
+4. ফাইলের একদম নিচে এই লাইনটা খেয়াল করুন:
+   ```sql
+   -- update public.profiles set is_admin = true where email = 'your-email@gmail.com';
+   ```
+   এটা **নতুন query** হিসেবে আলাদা করে চালান — শুরুর `--` কমেন্ট চিহ্ন সরিয়ে দিয়ে,
+   আর `your-email@gmail.com` জায়গায় আপনার নিজের Gmail বসিয়ে **Run** করুন
+5. এখন `https://your-app.vercel.app/admin` এ যান, Gmail দিয়ে লগইন করুন (যদি আগে থেকে
+   লগইন না থাকে) — Admin Panel খুলে যাবে
+
+⚠️ যাকে Admin বানাবেন সে Subject/Topic/Exam/Question যোগ-মুছা করতে পারবে — এটা শুধু
+বিশ্বস্ত কাউকে (যেমন নিজেকে) দিন। এই Admin ক্ষমতা দিয়ে অন্য কারো ব্যক্তিগত
+প্র্যাকটিস ডেটা/স্কোর দেখা যায় না — শুধু প্রশ্ন ব্যাংক এডিট করা যায়।
+
+**টেকনিক্যাল নোট:** `/admin` একটা React route (client-side), সার্ভারে আলাদা কোনো
+ফাইল/ফোল্ডার না। `vercel.json`-এ একটা rewrite rule দেওয়া আছে যাতে সরাসরি
+`/admin` লিংকে গেলে বা রিফ্রেশ করলেও পেজ ঠিকভাবে লোড হয় — এটা এমনিতেই কাজ করবে,
+আলাদা কিছু সেটাপ করতে হবে না।
+
+## প্রশ্ন যোগ করা
+
+**একটা একটা করে:** `/admin` পেজের "প্রশ্ন" ট্যাবে ফর্ম পূরণ করে যোগ করুন.
+
+**একসাথে অনেকগুলো (JSON Bulk Upload):** `/admin` পেজের "প্রশ্ন" ট্যাবের নিচে একটা
+textarea আছে, সেখানে এই ফরম্যাটে JSON বসিয়ে "JSON আপলোড করুন" চাপুন:
+
+```json
+[
+  {
+    "subject_slug": "bangla",
+    "topic_name_en": "Grammar",
+    "exam_slug": "",
+    "question_text": "প্রশ্নটি এখানে লিখুন",
+    "option_a": "ক",
+    "option_b": "খ",
+    "option_c": "গ",
+    "option_d": "ঘ",
+    "correct_option": "a",
+    "explanation": "ব্যাখ্যা (ঐচ্ছিক)",
+    "difficulty": "easy"
+  }
+]
+```
+
+- `subject_slug` — আবশ্যক, Admin Panel-এর "বিষয়" ট্যাবে যে slug দিয়েছেন সেটাই বসাতে হবে
+- `topic_name_en` — ঐচ্ছিক, না দিলে টপিক ছাড়াই প্রশ্নটা যোগ হবে
+- `exam_slug` — ঐচ্ছিক, দিলে প্রশ্নটা সেই প্রশ্নপত্রের অংশ হিসেবে গণ্য হবে
+- `correct_option` — `a`, `b`, `c`, বা `d` (ছোট হাতের অক্ষরে)
+- `difficulty` — `easy`, `medium`, বা `hard` (না দিলে `medium` ধরা হবে)
+
+আপলোডের পর কোনো প্রশ্ন বাদ পড়লে (যেমন ভুল `subject_slug`) সেটার কারণ মেসেজে দেখানো হবে।
+
+## ভবিষ্যতে নতুন ফিচার যোগ করা
+
+কোনো নতুন ফিচার লাগলে (নতুন পেজ, ডিজাইন পরিবর্তন, নতুন কুইজ মোড, ইত্যাদি) — Claude-কে
+বললেই কোড লিখে দেবে। এরপর:
+1. যেসব ফাইল বদলেছে সেগুলো GitHub-এ পুরনোটার জায়গায় নতুন করে আপলোড করুন (Add file → Upload files, একই নামে থাকলে GitHub নিজে থেকেই ওভাররাইট করবে)
+2. Vercel স্বয়ংক্রিয়ভাবে নতুন ভার্সন ডিপ্লয় করে দেবে (১-২ মিনিট)
+3. কোনো টার্মিনাল/কমান্ড লাগবে না
 
 ## প্রজেক্ট স্ট্রাকচার
 
 ```
 src/
-  App.jsx              — মূল রাউটিং ও কুইজ সেশন লজিক
+  App.jsx              — রাউটার রুট ("/" → MainApp, "/admin" → AdminPage)
+  MainApp.jsx           — মূল ইউজার-ফেসিং অ্যাপ ও কুইজ সেশন লজিক
+  pages/
+    AdminPage.jsx        — /admin রুট: নিজস্ব লগইন-চেক ও admin-গার্ড
   components/
     Login.jsx           — Google লগইন স্ক্রিন
-    TopBar.jsx           — নেভিগেশন বার
-    Dashboard.jsx        — ব্যক্তিগত প্রোগ্রেস (শুধু নিজের ডেটা)
+    TopBar.jsx           — মূল অ্যাপের নেভিগেশন বার (admin লিংক নেই, ইচ্ছাকৃতভাবে গোপন)
+    Dashboard.jsx        — ব্যক্তিগত প্রোগ্রেস + streak/level/badges (শুধু নিজের ডেটা)
     PracticeSetup.jsx    — সব বিষয়/একটা বিষয়/একটা টপিক বেছে নেওয়া
     Quiz.jsx             — OMR বাবল-শিট স্টাইলে প্রশ্ন-উত্তর
-    Result.jsx           — সেশন শেষে ফলাফল
+    Result.jsx           — সেশন শেষে ফলাফল (celebration + XP)
     ExamsList.jsx        — পূর্ববর্তী বছরের প্রশ্নপত্রের তালিকা
+    Admin.jsx            — Admin Panel-এর মূল CRUD UI (AdminPage থেকে ব্যবহৃত হয়)
   lib/
     supabaseClient.js
     utils.js
 schema.sql              — ডাটাবেজ স্কিমা + RLS প্রাইভেসি নিয়ম
+admin_migration.sql      — is_admin কলাম ও Admin-only write নিয়ম (schema.sql-এর পরে চালান)
+vercel.json              — SPA rewrite (যাতে সরাসরি /admin লিংক কাজ করে)
 ```
