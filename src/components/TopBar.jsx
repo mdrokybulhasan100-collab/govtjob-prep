@@ -1,0 +1,40 @@
+import { supabase } from "../lib/supabaseClient";
+
+const NAV_ITEMS = [
+  { key: "dashboard", label: "ড্যাশবোর্ড" },
+  { key: "practice", label: "প্র্যাকটিস" },
+  { key: "exams", label: "প্রশ্নপত্র" }
+];
+
+export default function TopBar({ view, setView, user }) {
+  return (
+    <header className="topbar">
+      <div className="topbar-left">
+        <span className="seal-mini">সচ</span>
+        <span className="topbar-title">সরকারি চাকরি প্রস্তুতি</span>
+      </div>
+
+      <nav className="topbar-nav">
+        {NAV_ITEMS.map((item) => (
+          <button
+            key={item.key}
+            className={`nav-link ${view === item.key ? "active" : ""}`}
+            onClick={() => setView(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="topbar-right">
+        {user?.user_metadata?.avatar_url && (
+          <img className="avatar" src={user.user_metadata.avatar_url} alt="" />
+        )}
+        <span className="user-name">{user?.user_metadata?.full_name || user?.email}</span>
+        <button className="logout-btn" title="লগআউট" onClick={() => supabase.auth.signOut()}>
+          ⎋
+        </button>
+      </div>
+    </header>
+  );
+}
