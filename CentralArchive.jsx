@@ -1,53 +1,56 @@
-// src/pages/CentralArchive.jsx
+// CentralArchive.jsx - সম্পূর্ণ নতুন কোড (কোনো কনটেক্সট ছাড়া)
 import React, { useState, useEffect } from 'react';
 import { supabase } from './src/lib/supabaseClient';
-import { useUser } from '../contexts/UserContext'; // আপনার ইউজার কনটেক্সট অনুযায়ী ইমপোর্ট করুন
-import QuestionCard from '../components/QuestionCard';
 
 const CentralArchive = () => {
-  const { user } = useUser();
+  const [user, setUser] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [filteredQuestions, setFilteredQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all'); // all, attended, unattended
+  const [filterStatus, setFilterStatus] = useState('all');
   const [subjects, setSubjects] = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);
 
-  // ১. সব প্রশ্ন ও ইউজারের উত্তর লোড করা
+  // ইউজার চেক করা (কোনো কনটেক্সট ছাড়া)
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user || null);
+    };
+    getUser();
+  }, []);
+
+  // ডাটা লোড করা
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      // প্রশ্ন লোড
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
         .select('*')
-        .order('exam_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (questionsError) {
-        console.error('Error fetching questions:', questionsError);
+        console.error('Error:', questionsError);
+        setLoading(false);
         return;
       }
 
       setQuestions(questionsData || []);
       setFilteredQuestions(questionsData || []);
 
-      // ইউনিক সাবজেক্ট লিস্ট তৈরি
       const uniqueSubjects = [...new Set(questionsData?.map(q => q.subject) || [])];
       setSubjects(uniqueSubjects);
 
-      // ইউজারের উত্তর লোড
-      const { data: answersData, error: answersError } = await supabase
+      const { data: answersData } = await supabase
         .from('user_answers')
         .select('question_id')
         .eq('user_id', user.id);
-
-      if (answersError) {
-        console.error('Error fetching answers:', answersError);
-        return;
-      }
 
       setUserAnswers(answersData?.map(a => a.question_id) || []);
       setLoading(false);
@@ -56,30 +59,23 @@ const CentralArchive = () => {
     fetchData();
   }, [user]);
 
-  // ২. সার্চ, ফিল্টার ও ট্যাগ অনুযায়ী ডাটা ফিল্টার করা
+  // ফিল্টার
   useEffect(() => {
     let result = [...questions];
-
-    // সার্চ ফিল্টার
     if (searchTerm) {
       result = result.filter(q =>
-        q.question_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.subject.toLowerCase().includes(searchTerm.toLowerCase())
+        q.question_text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.subject?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
-    // সাবজেক্ট ফিল্টার
     if (selectedSubject !== 'all') {
       result = result.filter(q => q.subject === selectedSubject);
     }
-
-    // Attended/Unattended ফিল্টার
     if (filterStatus === 'attended') {
       result = result.filter(q => userAnswers.includes(q.id));
     } else if (filterStatus === 'unattended') {
       result = result.filter(q => !userAnswers.includes(q.id));
     }
-
     setFilteredQuestions(result);
   }, [searchTerm, selectedSubject, filterStatus, questions, userAnswers]);
 
@@ -87,81 +83,77 @@ const CentralArchive = () => {
     return <div className="text-center py-10">লোড হচ্ছে...</div>;
   }
 
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center">
+        <h2 className="text-2xl font-bold mb-4">দয়া করে লগইন করুন</h2>
+        <a href="/" className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg">
+          হোমপেজে যান
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-center mb-8">📚 সেন্ট্রাল আর্কাইভ</h1>
-      <p className="text-center text-gray-600 mb-8">
-        সকল বিষয়ের সব প্রশ্ন এক জায়গায়। খুঁজুন, ফিল্টার করুন এবং প্রস্তুতি নিন।
-      </p>
 
-      {/* সার্চ ও ফিল্টার বার */}
+      {/* সার্চ ও ফিল্টার */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-8">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* সার্চ ইনপুট */}
           <input
             type="text"
             placeholder="বিষয় বা প্রশ্ন খুঁজুন..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 p-2 border rounded-lg"
           />
-
-          {/* সাবজেক্ট ফিল্টার */}
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-2 border rounded-lg"
           >
             <option value="all">সব বিষয়</option>
-            {subjects.map((subject) => (
-              <option key={subject} value={subject}>
-                {subject}
-              </option>
-            ))}
+            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-
-          {/* Attended/Unattended ফিল্টার */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="p-2 border rounded-lg"
           >
-            <option value="all">সব (Attended + Unattended)</option>
+            <option value="all">সব</option>
             <option value="attended">শুধু Attended</option>
             <option value="unattended">শুধু Unattended</option>
           </select>
-        </div>
-
-        {/* Go to Date (ঐচ্ছিক) */}
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            নির্দিষ্ট তারিখের প্রশ্ন দেখুন:
-          </label>
-          <input
-            type="date"
-            onChange={(e) => {
-              // এখানে আপনার ইমপ্লিমেন্টেশন অনুযায়ী কাজ করবে
-              console.log('Selected date:', e.target.value);
-            }}
-            className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
         </div>
       </div>
 
       {/* প্রশ্নের তালিকা */}
       {filteredQuestions.length === 0 ? (
-        <div className="text-center py-10 text-gray-500">
-          <p>কোন প্রশ্ন খুঁজে পাওয়া যায়নি।</p>
-        </div>
+        <div className="text-center py-10 text-gray-500">কোন প্রশ্ন খুঁজে পাওয়া যায়নি।</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuestions.map((question) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              isAttended={userAnswers.includes(question.id)}
-            />
-          ))}
+          {filteredQuestions.map((q) => {
+            const attended = userAnswers.includes(q.id);
+            return (
+              <div key={q.id} className="bg-white rounded-lg shadow-md p-6 border">
+                <div className="flex justify-between items-start mb-3">
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                    {q.subject || 'বিষয়হীন'}
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded ${attended ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}>
+                    {attended ? '✅ Attended' : '⏳ Unattended'}
+                  </span>
+                </div>
+                <p className="text-gray-800 font-medium mb-4 line-clamp-2">
+                  {q.question_text || 'প্রশ্ন নেই'}
+                </p>
+                <a href={`/question/${q.id}`} className="text-sm text-blue-600 hover:underline">
+                  প্রশ্ন দেখুন →
+                </a>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
