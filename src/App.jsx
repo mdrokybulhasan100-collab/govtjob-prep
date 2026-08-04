@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import MainApp from "./MainApp";
 import AdminPage from "./pages/AdminPage";
-import CentralArchive from './pages/CentralArchive';
+import CentralArchive from '../CentralArchive';
 
 export default function App() {
   return (
