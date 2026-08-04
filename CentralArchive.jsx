@@ -1,6 +1,6 @@
 // src/pages/CentralArchive.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from './src/lib/supabaseClient';
 import { useUser } from '../contexts/UserContext'; // আপনার ইউজার কনটেক্সট অনুযায়ী ইমপোর্ট করুন
 import QuestionCard from '../components/QuestionCard';
 
