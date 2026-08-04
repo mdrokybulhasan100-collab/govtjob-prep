@@ -169,8 +169,15 @@ function TopicsTab({ subjects, topics, refreshAll, flash }) {
 // ============================================================
 // EXAMS
 // ============================================================
+const EXAM_SAMPLE_JSON = `[
+  { "name": "৪৪তম বিসিএস প্রিলিমিনারি", "organization": "BPSC", "year": 2024, "slug": "bcs-44-preli" },
+  { "name": "সহকারী শিক্ষক নিয়োগ পরীক্ষা", "organization": "DPE", "year": 2023, "slug": "primary-teacher-2023" }
+]`;
+
 function ExamsTab({ exams, refreshAll, flash }) {
   const [form, setForm] = useState({ name: "", organization: "", year: "", slug: "" });
+  const [jsonText, setJsonText] = useState(EXAM_SAMPLE_JSON);
+  const [uploading, setUploading] = useState(false);
 
   async function addExam() {
     if (!form.name || !form.slug) return flash("err", "নাম ও slug আবশ্যক");
@@ -187,6 +194,41 @@ function ExamsTab({ exams, refreshAll, flash }) {
     if (error) return flash("err", error.message);
     flash("ok", "মুছে ফেলা হয়েছে");
     refreshAll();
+  }
+
+  async function bulkUploadExams() {
+    setUploading(true);
+    try {
+      const items = JSON.parse(jsonText);
+      if (!Array.isArray(items)) throw new Error("JSON অবশ্যই একটা array হতে হবে");
+
+      const rows = [];
+      const skipped = [];
+      items.forEach((item, i) => {
+        if (!item.name || !item.slug) { skipped.push(`#${i + 1}: name বা slug অনুপস্থিত`); return; }
+        rows.push({
+          name: item.name,
+          organization: item.organization || null,
+          year: item.year ? Number(item.year) : null,
+          slug: item.slug
+        });
+      });
+
+      if (rows.length) {
+        const { error } = await supabase.from("exams").upsert(rows, { onConflict: "slug" });
+        if (error) throw error;
+      }
+
+      flash(
+        skipped.length ? "err" : "ok",
+        `${rows.length}টি প্রশ্নপত্র যোগ/আপডেট হয়েছে।` + (skipped.length ? ` ${skipped.length}টি বাদ পড়েছে: ${skipped.join("; ")}` : "")
+      );
+      refreshAll();
+    } catch (err) {
+      flash("err", "JSON পড়তে সমস্যা: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -221,45 +263,89 @@ function ExamsTab({ exams, refreshAll, flash }) {
           ))}
         </tbody>
       </table>
+
+      <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
+
+      <h3>Bulk Upload (JSON)</h3>
+      <p className="mode-desc">
+        একসাথে অনেক প্রশ্নপত্র (previous year exam) যোগ করতে নিচের ফরম্যাটে JSON বসান।
+        একই <code>slug</code> আগে থেকে থাকলে সেটা আপডেট হয়ে যাবে (নতুন করে তৈরি হবে না)।
+      </p>
+      <div className="form-field">
+        <textarea style={{ minHeight: 160 }} value={jsonText} onChange={(e) => setJsonText(e.target.value)} />
+      </div>
+      <button className="cta-primary" disabled={uploading} onClick={bulkUploadExams} style={{ marginTop: 10 }}>
+        {uploading ? "আপলোড হচ্ছে..." : "JSON আপলোড করুন"}
+      </button>
     </div>
   );
 }
 
 // ============================================================
-// QUESTIONS (single add + JSON bulk upload)
+// QUESTIONS (single add + JSON bulk upload) — MCQ or Short Answer
 // ============================================================
 const SAMPLE_JSON = `[
   {
+    "question_type": "mcq",
     "subject_slug": "bangla",
     "topic_name_en": "Grammar",
     "exam_slug": "",
     "question_text": "প্রশ্নটি এখানে লিখুন",
     "option_a": "ক", "option_b": "খ", "option_c": "গ", "option_d": "ঘ",
     "correct_option": "a",
-    "explanation": "ব্যাখ্যা (ঐচ্ছিক)",
-    "difficulty": "easy"
+    "explanation": "ব্যাখ্যা (ঐচ্ছিক)"
+  },
+  {
+    "question_type": "short",
+    "subject_slug": "gk",
+    "topic_name_en": "Bangladesh Affairs",
+    "exam_slug": "",
+    "question_text": "বাংলাদেশের রাজধানীর নাম কী?",
+    "short_answer": "ঢাকা",
+    "explanation": ""
   }
 ]`;
 
+const EMPTY_QUESTION_FORM = {
+  subject_id: "", topic_id: "", exam_id: "", question_type: "mcq",
+  question_text: "", option_a: "", option_b: "", option_c: "", option_d: "",
+  correct_option: "a", short_answer: "", explanation: ""
+};
+
 function QuestionsTab({ subjects, topics, exams, flash }) {
-  const [form, setForm] = useState({
-    subject_id: "", topic_id: "", exam_id: "",
-    question_text: "", option_a: "", option_b: "", option_c: "", option_d: "",
-    correct_option: "a", explanation: "", difficulty: "medium"
-  });
+  const [form, setForm] = useState(EMPTY_QUESTION_FORM);
   const [jsonText, setJsonText] = useState(SAMPLE_JSON);
   const [uploading, setUploading] = useState(false);
 
   const topicsForSubject = topics.filter((t) => t.subject_id === form.subject_id);
+  const isShort = form.question_type === "short";
 
   async function addQuestion() {
-    const required = ["subject_id", "question_text", "option_a", "option_b", "option_c", "option_d", "correct_option"];
-    if (required.some((k) => !form[k])) return flash("err", "বিষয়, প্রশ্ন, ৪টা অপশন ও সঠিক উত্তর আবশ্যক");
-    const payload = { ...form, topic_id: form.topic_id || null, exam_id: form.exam_id || null };
+    if (!form.subject_id || !form.question_text) return flash("err", "বিষয় ও প্রশ্ন আবশ্যক");
+    if (isShort && !form.short_answer) return flash("err", "সঠিক উত্তর আবশ্যক");
+    if (!isShort && (!form.option_a || !form.option_b || !form.option_c || !form.option_d || !form.correct_option)) {
+      return flash("err", "৪টা অপশন ও সঠিক উত্তর আবশ্যক");
+    }
+
+    const payload = {
+      subject_id: form.subject_id,
+      topic_id: form.topic_id || null,
+      exam_id: form.exam_id || null,
+      question_type: form.question_type,
+      question_text: form.question_text,
+      explanation: form.explanation || null,
+      option_a: isShort ? null : form.option_a,
+      option_b: isShort ? null : form.option_b,
+      option_c: isShort ? null : form.option_c,
+      option_d: isShort ? null : form.option_d,
+      correct_option: isShort ? null : form.correct_option,
+      short_answer: isShort ? form.short_answer : null
+    };
+
     const { error } = await supabase.from("questions").insert(payload);
     if (error) return flash("err", error.message);
     flash("ok", "প্রশ্ন যোগ হয়েছে");
-    setForm({ ...form, question_text: "", option_a: "", option_b: "", option_c: "", option_d: "", explanation: "" });
+    setForm({ ...form, question_text: "", option_a: "", option_b: "", option_c: "", option_d: "", short_answer: "", explanation: "" });
   }
 
   async function bulkUpload() {
@@ -273,6 +359,15 @@ function QuestionsTab({ subjects, topics, exams, flash }) {
       items.forEach((item, i) => {
         const subject = subjects.find((s) => s.slug === item.subject_slug);
         if (!subject) { skipped.push(`#${i + 1}: subject_slug "${item.subject_slug}" পাওয়া যায়নি`); return; }
+        if (!item.question_text) { skipped.push(`#${i + 1}: question_text অনুপস্থিত`); return; }
+
+        const type = item.question_type === "short" ? "short" : "mcq";
+        if (type === "short" && !item.short_answer) { skipped.push(`#${i + 1}: short_answer অনুপস্থিত`); return; }
+        if (type === "mcq" && (!item.option_a || !item.option_b || !item.option_c || !item.option_d || !item.correct_option)) {
+          skipped.push(`#${i + 1}: ৪টা অপশন ও correct_option আবশ্যক`);
+          return;
+        }
+
         let topicId = null;
         if (item.topic_name_en) {
           const topic = topics.find((t) => t.subject_id === subject.id && t.name_en === item.topic_name_en);
@@ -283,19 +378,20 @@ function QuestionsTab({ subjects, topics, exams, flash }) {
           const exam = exams.find((e) => e.slug === item.exam_slug);
           if (exam) examId = exam.id;
         }
-        if (!item.question_text || !item.option_a || !item.option_b || !item.option_c || !item.option_d || !item.correct_option) {
-          skipped.push(`#${i + 1}: প্রয়োজনীয় ফিল্ড অনুপস্থিত`);
-          return;
-        }
+
         rows.push({
           subject_id: subject.id,
           topic_id: topicId,
           exam_id: examId,
+          question_type: type,
           question_text: item.question_text,
-          option_a: item.option_a, option_b: item.option_b, option_c: item.option_c, option_d: item.option_d,
-          correct_option: item.correct_option,
-          explanation: item.explanation || null,
-          difficulty: item.difficulty || "medium"
+          option_a: type === "mcq" ? item.option_a : null,
+          option_b: type === "mcq" ? item.option_b : null,
+          option_c: type === "mcq" ? item.option_c : null,
+          option_d: type === "mcq" ? item.option_d : null,
+          correct_option: type === "mcq" ? item.correct_option : null,
+          short_answer: type === "short" ? item.short_answer : null,
+          explanation: item.explanation || null
         });
       });
 
@@ -319,6 +415,12 @@ function QuestionsTab({ subjects, topics, exams, flash }) {
     <div>
       <h3 style={{ marginTop: 0 }}>একটা প্রশ্ন যোগ করুন</h3>
       <div className="admin-form">
+        <div className="form-field" style={{ maxWidth: 180 }}><label>প্রশ্নের ধরন</label>
+          <select value={form.question_type} onChange={(e) => setForm({ ...form, question_type: e.target.value })}>
+            <option value="mcq">MCQ (৪টা অপশন)</option>
+            <option value="short">Short Answer (সরাসরি উত্তর)</option>
+          </select>
+        </div>
         <div className="form-field"><label>বিষয়</label>
           <select value={form.subject_id} onChange={(e) => setForm({ ...form, subject_id: e.target.value, topic_id: "" })}>
             <option value="">বেছে নিন</option>
@@ -343,39 +445,50 @@ function QuestionsTab({ subjects, topics, exams, flash }) {
           <textarea value={form.question_text} onChange={(e) => setForm({ ...form, question_text: e.target.value })} />
         </div>
       </div>
-      <div className="admin-form">
-        <div className="form-field"><label>অপশন A</label><input value={form.option_a} onChange={(e) => setForm({ ...form, option_a: e.target.value })} /></div>
-        <div className="form-field"><label>অপশন B</label><input value={form.option_b} onChange={(e) => setForm({ ...form, option_b: e.target.value })} /></div>
-        <div className="form-field"><label>অপশন C</label><input value={form.option_c} onChange={(e) => setForm({ ...form, option_c: e.target.value })} /></div>
-        <div className="form-field"><label>অপশন D</label><input value={form.option_d} onChange={(e) => setForm({ ...form, option_d: e.target.value })} /></div>
-      </div>
-      <div className="admin-form">
-        <div className="form-field" style={{ maxWidth: 140 }}><label>সঠিক উত্তর</label>
-          <select value={form.correct_option} onChange={(e) => setForm({ ...form, correct_option: e.target.value })}>
-            <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
-          </select>
+
+      {isShort ? (
+        <div className="admin-form">
+          <div className="form-field" style={{ minWidth: 280 }}><label>সঠিক উত্তর</label>
+            <input value={form.short_answer} onChange={(e) => setForm({ ...form, short_answer: e.target.value })} placeholder="যেমন: ঢাকা" />
+          </div>
+          <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
+            <input value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+          </div>
         </div>
-        <div className="form-field" style={{ maxWidth: 140 }}><label>কঠিনতা</label>
-          <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
-            <option value="easy">সহজ</option><option value="medium">মাঝারি</option><option value="hard">কঠিন</option>
-          </select>
-        </div>
-        <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
-          <input value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="admin-form">
+            <div className="form-field"><label>অপশন A</label><input value={form.option_a} onChange={(e) => setForm({ ...form, option_a: e.target.value })} /></div>
+            <div className="form-field"><label>অপশন B</label><input value={form.option_b} onChange={(e) => setForm({ ...form, option_b: e.target.value })} /></div>
+            <div className="form-field"><label>অপশন C</label><input value={form.option_c} onChange={(e) => setForm({ ...form, option_c: e.target.value })} /></div>
+            <div className="form-field"><label>অপশন D</label><input value={form.option_d} onChange={(e) => setForm({ ...form, option_d: e.target.value })} /></div>
+          </div>
+          <div className="admin-form">
+            <div className="form-field" style={{ maxWidth: 140 }}><label>সঠিক উত্তর</label>
+              <select value={form.correct_option} onChange={(e) => setForm({ ...form, correct_option: e.target.value })}>
+                <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
+              </select>
+            </div>
+            <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
+              <input value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+            </div>
+          </div>
+        </>
+      )}
+
       <button className="cta-primary" onClick={addQuestion}>+ প্রশ্ন যোগ করুন</button>
 
       <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
 
       <h3>Bulk Upload (JSON)</h3>
       <p className="mode-desc">
-        একসাথে অনেক প্রশ্ন যোগ করতে নিচের ফরম্যাটে JSON বসান। <code>subject_slug</code> অবশ্যই Subjects
-        ট্যাবে থাকা কোনো slug-এর সাথে মিলতে হবে। <code>topic_name_en</code> ও <code>exam_slug</code> ঐচ্ছিক।
+        একসাথে অনেক প্রশ্ন যোগ করতে নিচের ফরম্যাটে JSON বসান। <code>question_type</code> না দিলে
+        ধরে নেওয়া হবে <code>mcq</code>। <code>subject_slug</code> অবশ্যই Subjects ট্যাবে থাকা কোনো
+        slug-এর সাথে মিলতে হবে। <code>topic_name_en</code> ও <code>exam_slug</code> ঐচ্ছিক।
       </p>
       <div className="form-field">
         <textarea
-          style={{ minHeight: 220 }}
+          style={{ minHeight: 260 }}
           value={jsonText}
           onChange={(e) => setJsonText(e.target.value)}
         />

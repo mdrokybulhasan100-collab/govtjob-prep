@@ -109,9 +109,27 @@ Question যোগ/মুছা এবং প্রশ্ন **JSON দিয়
 `/admin` লিংকে গেলে বা রিফ্রেশ করলেও পেজ ঠিকভাবে লোড হয় — এটা এমনিতেই কাজ করবে,
 আলাদা কিছু সেটাপ করতে হবে না।
 
+## প্রশ্নের ধরন আপডেট (MCQ + Short Answer) — বিদ্যমান ডাটাবেজ থাকলে
+
+যদি আপনি আগেই `schema.sql` ও `admin_migration.sql` চালিয়ে থাকেন, প্রশ্নে এখন দুই
+ধরনের সাপোর্ট যোগ করতে একটা নতুন migration লাগবে:
+
+1. Supabase Dashboard → **SQL Editor** → **New query**
+2. এই রিপোর `questions_upgrade_migration.sql` ফাইলের পুরো কনটেন্ট কপি-পেস্ট করে **Run** করুন
+
+এটা করবে:
+- `question_type` কলাম যোগ করবে (`mcq` অথবা `short`, বিদ্যমান সব প্রশ্ন `mcq` থেকে যাবে)
+- `short_answer` কলাম যোগ করবে (short-answer প্রশ্নের সঠিক উত্তর টেক্সট আকারে রাখার জন্য)
+- MCQ-এর অপশন/সঠিক-উত্তর কলামগুলো আর বাধ্যতামূলক থাকবে না (short-answer প্রশ্নে এগুলো ফাঁকা থাকে)
+- `difficulty` কলাম সম্পূর্ণ মুছে ফেলবে (আর ব্যবহার হয় না)
+
+নতুনভাবে (fresh) সেটআপ করলে `schema.sql`-এই এসব থাকবে, আলাদা কিছু চালাতে হবে না।
+
 ## প্রশ্ন যোগ করা
 
-**একটা একটা করে:** `/admin` পেজের "প্রশ্ন" ট্যাবে ফর্ম পূরণ করে যোগ করুন.
+**একটা একটা করে:** `/admin` পেজের "প্রশ্ন" ট্যাবে উপরে "প্রশ্নের ধরন" থেকে **MCQ** (৪টা
+অপশন) অথবা **Short Answer** (সরাসরি টেক্সট উত্তর, যেমন "বাংলাদেশের রাজধানীর নাম কী?"
+→ "ঢাকা") বেছে নিয়ে ফর্ম পূরণ করুন।
 
 **একসাথে অনেকগুলো (JSON Bulk Upload):** `/admin` পেজের "প্রশ্ন" ট্যাবের নিচে একটা
 textarea আছে, সেখানে এই ফরম্যাটে JSON বসিয়ে "JSON আপলোড করুন" চাপুন:
@@ -119,6 +137,7 @@ textarea আছে, সেখানে এই ফরম্যাটে JSON ব�
 ```json
 [
   {
+    "question_type": "mcq",
     "subject_slug": "bangla",
     "topic_name_en": "Grammar",
     "exam_slug": "",
@@ -128,19 +147,44 @@ textarea আছে, সেখানে এই ফরম্যাটে JSON ব�
     "option_c": "গ",
     "option_d": "ঘ",
     "correct_option": "a",
-    "explanation": "ব্যাখ্যা (ঐচ্ছিক)",
-    "difficulty": "easy"
+    "explanation": "ব্যাখ্যা (ঐচ্ছিক)"
+  },
+  {
+    "question_type": "short",
+    "subject_slug": "gk",
+    "topic_name_en": "Bangladesh Affairs",
+    "exam_slug": "",
+    "question_text": "বাংলাদেশের রাজধানীর নাম কী?",
+    "short_answer": "ঢাকা",
+    "explanation": ""
   }
 ]
 ```
 
+- `question_type` — `mcq` অথবা `short`; না দিলে `mcq` ধরে নেওয়া হবে
 - `subject_slug` — আবশ্যক, Admin Panel-এর "বিষয়" ট্যাবে যে slug দিয়েছেন সেটাই বসাতে হবে
 - `topic_name_en` — ঐচ্ছিক, না দিলে টপিক ছাড়াই প্রশ্নটা যোগ হবে
 - `exam_slug` — ঐচ্ছিক, দিলে প্রশ্নটা সেই প্রশ্নপত্রের অংশ হিসেবে গণ্য হবে
-- `correct_option` — `a`, `b`, `c`, বা `d` (ছোট হাতের অক্ষরে)
-- `difficulty` — `easy`, `medium`, বা `hard` (না দিলে `medium` ধরা হবে)
+- MCQ হলে: `option_a`–`option_d` ও `correct_option` (`a`/`b`/`c`/`d`) আবশ্যক
+- Short Answer হলে: `short_answer` আবশ্যক (এটাই সঠিক উত্তর হিসেবে মিলিয়ে দেখা হবে)
 
 আপলোডের পর কোনো প্রশ্ন বাদ পড়লে (যেমন ভুল `subject_slug`) সেটার কারণ মেসেজে দেখানো হবে।
+
+## পূর্ববর্তী বছরের প্রশ্নপত্র (Exam) Bulk Upload
+
+শুধু প্রশ্ন না, **Exam-ও এখন JSON দিয়ে একসাথে অনেকগুলো যোগ করা যায়** — `/admin`
+পেজের "প্রশ্নপত্র" ট্যাবের নিচে:
+
+```json
+[
+  { "name": "৪৪তম বিসিএস প্রিলিমিনারি", "organization": "BPSC", "year": 2024, "slug": "bcs-44-preli" },
+  { "name": "সহকারী শিক্ষক নিয়োগ পরীক্ষা", "organization": "DPE", "year": 2023, "slug": "primary-teacher-2023" }
+]
+```
+
+একই `slug` আগে থেকে থাকলে সেটার তথ্য আপডেট হয়ে যাবে (ডুপ্লিকেট তৈরি হবে না)। এরপর
+প্রশ্ন bulk upload করার সময় সংশ্লিষ্ট `exam_slug` ব্যবহার করে প্রশ্নগুলোকে এই
+প্রশ্নপত্রের সাথে যুক্ত করতে পারবেন।
 
 ## ভবিষ্যতে নতুন ফিচার যোগ করা
 
@@ -172,5 +216,6 @@ src/
     utils.js
 schema.sql              — ডাটাবেজ স্কিমা + RLS প্রাইভেসি নিয়ম
 admin_migration.sql      — is_admin কলাম ও Admin-only write নিয়ম (schema.sql-এর পরে চালান)
+questions_upgrade_migration.sql — MCQ+Short Answer সাপোর্ট, difficulty বাদ (বিদ্যমান DB থাকলে চালান)
 vercel.json              — SPA rewrite (যাতে সরাসরি /admin লিংক কাজ করে)
 ```

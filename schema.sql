@@ -71,19 +71,23 @@ create table if not exists public.exams (
 );
 
 -- 5. QUESTIONS
+-- question_type = 'mcq' (default) or 'short'.
+--   mcq   -> uses option_a..d + correct_option
+--   short -> uses short_answer (a plain text answer, e.g. "ঢাকা")
 create table if not exists public.questions (
   id uuid primary key default gen_random_uuid(),
   subject_id uuid references public.subjects(id) on delete cascade,
   topic_id uuid references public.topics(id) on delete set null,
   exam_id uuid references public.exams(id) on delete set null,
+  question_type text not null default 'mcq' check (question_type in ('mcq','short')),
   question_text text not null,
-  option_a text not null,
-  option_b text not null,
-  option_c text not null,
-  option_d text not null,
-  correct_option text not null check (correct_option in ('a','b','c','d')),
-  explanation text,
-  difficulty text default 'medium' check (difficulty in ('easy','medium','hard'))
+  option_a text,
+  option_b text,
+  option_c text,
+  option_d text,
+  correct_option text check (correct_option is null or correct_option in ('a','b','c','d')),
+  short_answer text,
+  explanation text
 );
 
 -- 6. PRACTICE SESSIONS (private — one row per quiz attempt, owned by one user)
@@ -236,40 +240,49 @@ insert into public.exams (name, organization, year, slug) values
   ('সিনিয়র অফিসার (ক্যাশ)', 'Combined Bank', 2022, 'bank-so-cash-2022')
 on conflict (slug) do nothing;
 
-insert into public.questions (subject_id, topic_id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty)
-select s.id, t.id, e.id,
+insert into public.questions (subject_id, topic_id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d, correct_option, explanation)
+select s.id, t.id, e.id, 'mcq',
   '"সমাস" শব্দটির আভিধানিক অর্থ কী?',
   'বিস্তার', 'সংক্ষেপণ', 'বিভাজন', 'সংযোজন',
-  'b', 'সমাস শব্দের আভিধানিক অর্থ সংক্ষেপণ — একাধিক পদকে একপদে পরিণত করা।', 'easy'
+  'b', 'সমাস শব্দের আভিধানিক অর্থ সংক্ষেপণ — একাধিক পদকে একপদে পরিণত করা।'
 from public.subjects s
 join public.topics t on t.subject_id = s.id and t.name_en = 'Grammar' and s.slug = 'bangla'
 left join public.exams e on e.slug = 'bcs-43-preli'
 where s.slug = 'bangla' limit 1;
 
-insert into public.questions (subject_id, topic_id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty)
-select s.id, t.id, null,
+insert into public.questions (subject_id, topic_id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d, correct_option, explanation)
+select s.id, t.id, null, 'mcq',
   'Choose the correct synonym of "Ubiquitous":',
   'Rare', 'Omnipresent', 'Hidden', 'Ancient',
-  'b', '"Ubiquitous" means present everywhere, so the closest synonym is "Omnipresent".', 'medium'
+  'b', '"Ubiquitous" means present everywhere, so the closest synonym is "Omnipresent".'
 from public.subjects s
 join public.topics t on t.subject_id = s.id and t.name_en = 'Vocabulary' and s.slug = 'english'
 where s.slug = 'english' limit 1;
 
-insert into public.questions (subject_id, topic_id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty)
-select s.id, t.id, null,
+insert into public.questions (subject_id, topic_id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d, correct_option, explanation)
+select s.id, t.id, null, 'mcq',
   'একটি সংখ্যার ২৫% যদি ৫০ হয়, তবে সংখ্যাটি কত?',
   '১৫০', '২০০', '২৫০', '৩০০',
-  'b', '৫০ ÷ ২৫ × ১০০ = ২০০', 'easy'
+  'b', '৫০ ÷ ২৫ × ১০০ = ২০০'
 from public.subjects s
 join public.topics t on t.subject_id = s.id and t.name_en = 'Arithmetic' and s.slug = 'math'
 where s.slug = 'math' limit 1;
 
-insert into public.questions (subject_id, topic_id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, explanation, difficulty)
-select s.id, t.id, e.id,
+insert into public.questions (subject_id, topic_id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d, correct_option, explanation)
+select s.id, t.id, e.id, 'mcq',
   'বাংলাদেশের সংবিধান কার্যকর হয় কবে?',
   '১৬ ডিসেম্বর ১৯৭২', '৪ নভেম্বর ১৯৭২', '২৬ মার্চ ১৯৭২', '১ জানুয়ারি ১৯৭৩',
-  'a', 'বাংলাদেশের সংবিধান ৪ নভেম্বর ১৯৭২ গৃহীত হয় এবং ১৬ ডিসেম্বর ১৯৭২ থেকে কার্যকর হয়।', 'medium'
+  'a', 'বাংলাদেশের সংবিধান ৪ নভেম্বর ১৯৭২ গৃহীত হয় এবং ১৬ ডিসেম্বর ১৯৭২ থেকে কার্যকর হয়।'
 from public.subjects s
 join public.topics t on t.subject_id = s.id and t.name_en = 'Bangladesh Affairs' and s.slug = 'gk'
 left join public.exams e on e.slug = 'bcs-42-preli'
+where s.slug = 'gk' limit 1;
+
+-- short-answer example
+insert into public.questions (subject_id, topic_id, exam_id, question_type, question_text, short_answer, explanation)
+select s.id, t.id, null, 'short',
+  'বাংলাদেশের রাজধানীর নাম কী?',
+  'ঢাকা', null
+from public.subjects s
+join public.topics t on t.subject_id = s.id and t.name_en = 'Bangladesh Affairs' and s.slug = 'gk'
 where s.slug = 'gk' limit 1;

@@ -321,6 +321,19 @@ button { font-family: inherit; cursor: pointer; }
 }
 .quiz-nav { display: flex; justify-content: flex-end; margin-top: 22px; }
 
+.short-answer-block { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.short-answer-input {
+  width: 100%; border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 14px 16px; font-size: 16px; font-family: inherit;
+  background: var(--bg); color: var(--ink);
+}
+.short-answer-input:focus { border-color: var(--indigo); outline: none; }
+.short-answer-feedback {
+  font-weight: 700; font-size: 15px; padding: 10px 16px; border-radius: 10px;
+}
+.short-answer-feedback.ok { background: var(--emerald-soft); color: #067A55; }
+.short-answer-feedback.err { background: var(--rose-soft); color: #9F1D1D; }
+
 /* ============================================================
    RESULT — celebratory
    ============================================================ */
