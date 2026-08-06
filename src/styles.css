@@ -182,6 +182,22 @@ button { font-family: inherit; cursor: pointer; }
   .chart-grid { grid-template-columns: 1fr; }
 }
 
+.highlight-card {
+  border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 4px;
+}
+.highlight-good { background: var(--emerald-soft); }
+.highlight-bad { background: var(--amber-soft); }
+.highlight-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.highlight-name { font-size: 17px; font-weight: 700; color: var(--ink); }
+.highlight-pct { font-family: var(--font-mono); font-size: 13px; color: var(--ink-soft); }
+
+.topic-progress-list { display: flex; flex-direction: column; gap: 14px; }
+.topic-progress-row { display: flex; align-items: center; gap: 12px; }
+.topic-progress-row .tp-name { flex: 0 0 140px; font-size: 13.5px; font-weight: 600; }
+.topic-progress-row .sc-bar-track { flex: 1; height: 7px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.topic-progress-row .sc-bar-fill { height: 100%; background: linear-gradient(90deg, var(--emerald), #34D399); }
+.topic-progress-row .tp-pct { flex: 0 0 auto; font-size: 12px; font-family: var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
+
 /* ============================================================
    DASHBOARD — gamified header: streak, level, XP
    ============================================================ */
@@ -528,6 +544,9 @@ button { font-family: inherit; cursor: pointer; }
   .main-area { padding: 20px 14px 60px; }
   .dash-hero { flex-direction: column; align-items: flex-start; }
   .omr-sheet { padding: 22px; }
+  .topic-progress-row { flex-wrap: wrap; }
+  .topic-progress-row .tp-name { flex: 1 1 100%; }
+  .topic-progress-row .sc-bar-track { flex: 1 1 auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

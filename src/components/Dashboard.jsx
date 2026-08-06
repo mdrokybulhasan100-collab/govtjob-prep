@@ -41,12 +41,21 @@ function last14Days() {
   return days;
 }
 
+const MODE_LABELS = {
+  all: "সব বিষয়", subject: "বিষয়ভিত্তিক", topic: "টপিকভিত্তিক",
+  exam: "পরীক্ষা", custom: "কুইজ বিল্ডার", live: "লাইভ পরীক্ষা"
+};
+
 export default function Dashboard() {
-  const { user, subjects, setView } = useApp();
+  const { user, subjects, topics, exams, setView } = useApp();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalQ: 0, sessions: 0, correct: 0, accuracy: 0, streak: 0, xp: 0 });
   const [trendData, setTrendData] = useState([]);
   const [subjectData, setSubjectData] = useState([]);
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [bestSubject, setBestSubject] = useState(null);
+  const [worstSubject, setWorstSubject] = useState(null);
+  const [topicProgress, setTopicProgress] = useState([]);
 
   useEffect(() => {
     load();
@@ -70,7 +79,27 @@ export default function Dashboard() {
     const xp = correct * 10 + totalQ * 2;
     setStats({ totalQ, sessions: rows.length, correct, accuracy, streak, xp });
 
-    // ---- Daily trend (last 14 days): questions answered + accuracy ----
+    // ---- Recent sessions (last 8) ----
+    const sorted = [...rows].sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+    const recent = sorted.slice(0, 8).map((s) => {
+      const subj = subjects.find((x) => x.id === s.subject_id);
+      const top = topics.find((x) => x.id === s.topic_id);
+      const ex = exams.find((x) => x.id === s.exam_id);
+      const label = top?.name_bn || subj?.name_bn || ex?.name || MODE_LABELS[s.mode] || s.mode;
+      const pct = s.total_questions ? Math.round((s.correct_answers / s.total_questions) * 100) : 0;
+      return {
+        id: s.id,
+        mode: MODE_LABELS[s.mode] || s.mode,
+        label,
+        date: new Date(s.completed_at).toLocaleDateString("bn-BD", { day: "numeric", month: "short" }),
+        correct: s.correct_answers,
+        total: s.total_questions,
+        pct
+      };
+    });
+    setRecentSessions(recent);
+
+    // ---- Daily trend (last 14 days): questions answered ----
     const byDay = {};
     rows.forEach((s) => {
       const day = s.completed_at.slice(0, 10);
@@ -89,31 +118,61 @@ export default function Dashboard() {
     });
     setTrendData(trend);
 
-    // ---- Subject-wise correct/wrong ----
+    // ---- Subject-wise correct/wrong + topic-wise progress ----
     const sessionIds = rows.map((s) => s.id);
     let answers = [];
     if (sessionIds.length) {
       const { data } = await supabase
         .from("session_answers")
-        .select("is_correct, questions(subject_id)")
+        .select("is_correct, questions(subject_id, topic_id, topics(name_bn))")
         .in("session_id", sessionIds);
       answers = data || [];
     }
+
     const bySubject = {};
+    const byTopic = {};
     answers.forEach((a) => {
       const sid = a.questions?.subject_id;
-      if (!sid) return;
-      bySubject[sid] = bySubject[sid] || { correct: 0, wrong: 0 };
-      if (a.is_correct) bySubject[sid].correct++;
-      else if (a.is_correct === false) bySubject[sid].wrong++;
+      const tid = a.questions?.topic_id;
+      const tname = a.questions?.topics?.name_bn;
+      if (sid) {
+        bySubject[sid] = bySubject[sid] || { correct: 0, wrong: 0 };
+        if (a.is_correct) bySubject[sid].correct++;
+        else if (a.is_correct === false) bySubject[sid].wrong++;
+      }
+      if (tid) {
+        byTopic[tid] = byTopic[tid] || { name: tname || "অজানা টপিক", correct: 0, total: 0 };
+        byTopic[tid].total++;
+        if (a.is_correct) byTopic[tid].correct++;
+      }
     });
+
     const subjectChart = subjects
       .map((sub) => {
         const s = bySubject[sub.id] || { correct: 0, wrong: 0 };
-        return { name: `${sub.icon} ${sub.name_bn}`, সঠিক: s.correct, ভুল: s.wrong };
+        return { name: `${sub.icon} ${sub.name_bn}`, সঠিক: s.correct, ভুল: s.wrong, total: s.correct + s.wrong };
       })
-      .filter((s) => s.সঠিক + s.ভুল > 0);
+      .filter((s) => s.total > 0);
     setSubjectData(subjectChart);
+
+    // best/worst subject — need a minimum sample size to be meaningful
+    const qualifying = subjectChart.filter((s) => s.total >= 5);
+    if (qualifying.length) {
+      const withAcc = qualifying.map((s) => ({ ...s, acc: s.সঠিক / s.total }));
+      withAcc.sort((a, b) => b.acc - a.acc);
+      setBestSubject(withAcc[0]);
+      setWorstSubject(withAcc[withAcc.length - 1]);
+    } else {
+      setBestSubject(null);
+      setWorstSubject(null);
+    }
+
+    const topicList = Object.values(byTopic)
+      .filter((t) => t.total >= 3)
+      .map((t) => ({ ...t, pct: Math.round((t.correct / t.total) * 100) }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6);
+    setTopicProgress(topicList);
 
     setLoading(false);
   }
@@ -211,7 +270,64 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <button className="cta-primary" style={{ marginTop: 24 }} onClick={() => setView("practice")}>
+          {(bestSubject || worstSubject) && (
+            <div className="chart-grid" style={{ marginBottom: 20 }}>
+              {bestSubject && (
+                <div className="highlight-card highlight-good">
+                  <span className="highlight-label">💪 সবচেয়ে ভালো বিষয়</span>
+                  <span className="highlight-name">{bestSubject.name}</span>
+                  <span className="highlight-pct">{toBn(Math.round(bestSubject.acc * 100))}% নির্ভুলতা</span>
+                </div>
+              )}
+              {worstSubject && (
+                <div className="highlight-card highlight-bad">
+                  <span className="highlight-label">📌 আরও অনুশীলন দরকার</span>
+                  <span className="highlight-name">{worstSubject.name}</span>
+                  <span className="highlight-pct">{toBn(Math.round(worstSubject.acc * 100))}% নির্ভুলতা</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {topicProgress.length > 0 && (
+            <>
+              <h2 className="section-title">টপিকভিত্তিক প্রোগ্রেস</h2>
+              <div className="chart-card">
+                <div className="topic-progress-list">
+                  {topicProgress.map((t, i) => (
+                    <div className="topic-progress-row" key={i}>
+                      <span className="tp-name">{t.name}</span>
+                      <div className="sc-bar-track"><div className="sc-bar-fill" style={{ width: `${t.pct}%` }} /></div>
+                      <span className="tp-pct">{toBn(t.correct)}/{toBn(t.total)} · {toBn(t.pct)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {recentSessions.length > 0 && (
+            <>
+              <h2 className="section-title">সাম্প্রতিক সেশন</h2>
+              <div className="chart-card">
+                <table className="admin-table">
+                  <thead><tr><th>তারিখ</th><th>মোড</th><th>বিষয়/টপিক</th><th>স্কোর</th></tr></thead>
+                  <tbody>
+                    {recentSessions.map((s) => (
+                      <tr key={s.id}>
+                        <td>{s.date}</td>
+                        <td>{s.mode}</td>
+                        <td>{s.label}</td>
+                        <td>{toBn(s.correct)}/{toBn(s.total)} ({toBn(s.pct)}%)</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          <button className="cta-primary" style={{ marginTop: 4 }} onClick={() => setView("practice")}>
             নতুন প্র্যাকটিস শুরু করুন →
           </button>
         </>
