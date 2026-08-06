@@ -56,6 +56,10 @@ export default function Dashboard() {
   const [bestSubject, setBestSubject] = useState(null);
   const [worstSubject, setWorstSubject] = useState(null);
   const [topicProgress, setTopicProgress] = useState([]);
+  const [studyMinutes, setStudyMinutes] = useState(0);
+  const [weekCompare, setWeekCompare] = useState(null); // { thisWeekQ, lastWeekQ, thisAcc, lastAcc }
+  const [typeBreakdown, setTypeBreakdown] = useState(null); // { mcq: {correct,total}, short: {correct,total} }
+  const [quickCounts, setQuickCounts] = useState({ favorites: 0, topicsRead: 0, liveExams: 0 });
 
   useEffect(() => {
     load();
@@ -78,6 +82,37 @@ export default function Dashboard() {
     const streak = computeStreak(rows.map((s) => s.completed_at.slice(0, 10)));
     const xp = correct * 10 + totalQ * 2;
     setStats({ totalQ, sessions: rows.length, correct, accuracy, streak, xp });
+
+    // ---- Total study time (sum of started_at -> completed_at per session) ----
+    const totalMs = rows.reduce((a, s) => {
+      if (!s.started_at || !s.completed_at) return a;
+      return a + (new Date(s.completed_at) - new Date(s.started_at));
+    }, 0);
+    setStudyMinutes(Math.round(totalMs / 60000));
+
+    // ---- This week vs last week ----
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const thisWeekRows = rows.filter((s) => now - new Date(s.completed_at).getTime() <= 7 * oneDay);
+    const lastWeekRows = rows.filter((s) => {
+      const diff = now - new Date(s.completed_at).getTime();
+      return diff > 7 * oneDay && diff <= 14 * oneDay;
+    });
+    const sumQ = (arr) => arr.reduce((a, s) => a + s.total_questions, 0);
+    const sumC = (arr) => arr.reduce((a, s) => a + s.correct_answers, 0);
+    const thisWeekQ = sumQ(thisWeekRows);
+    const lastWeekQ = sumQ(lastWeekRows);
+    const thisAcc = thisWeekQ ? Math.round((sumC(thisWeekRows) / thisWeekQ) * 100) : 0;
+    const lastAcc = lastWeekQ ? Math.round((sumC(lastWeekRows) / lastWeekQ) * 100) : 0;
+    setWeekCompare({ thisWeekQ, lastWeekQ, thisAcc, lastAcc });
+
+    // ---- Quick counts: favorites, topics studied, live exams participated ----
+    const [{ count: favCount }, { count: topicReadCount }, { count: liveCount }] = await Promise.all([
+      supabase.from("favorites").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("topic_reads").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("practice_sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("mode", "live").not("completed_at", "is", null)
+    ]);
+    setQuickCounts({ favorites: favCount || 0, topicsRead: topicReadCount || 0, liveExams: liveCount || 0 });
 
     // ---- Recent sessions (last 8) ----
     const sorted = [...rows].sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
@@ -118,23 +153,25 @@ export default function Dashboard() {
     });
     setTrendData(trend);
 
-    // ---- Subject-wise correct/wrong + topic-wise progress ----
+    // ---- Subject-wise correct/wrong + topic-wise progress + question-type breakdown ----
     const sessionIds = rows.map((s) => s.id);
     let answers = [];
     if (sessionIds.length) {
       const { data } = await supabase
         .from("session_answers")
-        .select("is_correct, questions(subject_id, topic_id, topics(name_bn))")
+        .select("is_correct, questions(subject_id, topic_id, question_type, topics(name_bn))")
         .in("session_id", sessionIds);
       answers = data || [];
     }
 
     const bySubject = {};
     const byTopic = {};
+    const byType = { mcq: { correct: 0, total: 0 }, short: { correct: 0, total: 0 } };
     answers.forEach((a) => {
       const sid = a.questions?.subject_id;
       const tid = a.questions?.topic_id;
       const tname = a.questions?.topics?.name_bn;
+      const qtype = a.questions?.question_type === "short" ? "short" : "mcq";
       if (sid) {
         bySubject[sid] = bySubject[sid] || { correct: 0, wrong: 0 };
         if (a.is_correct) bySubject[sid].correct++;
@@ -145,7 +182,12 @@ export default function Dashboard() {
         byTopic[tid].total++;
         if (a.is_correct) byTopic[tid].correct++;
       }
+      if (a.questions) {
+        byType[qtype].total++;
+        if (a.is_correct) byType[qtype].correct++;
+      }
     });
+    setTypeBreakdown(byType);
 
     const subjectChart = subjects
       .map((sub) => {
@@ -200,10 +242,29 @@ export default function Dashboard() {
           <span className="stat-label">নির্ভুলতা</span>
         </div>
         <div className="dash-stat-mini">
+          <span className="stat-num">{toBn(Math.floor(studyMinutes / 60))}<small style={{ fontSize: 12 }}>ঘ</small> {toBn(studyMinutes % 60)}<small style={{ fontSize: 12 }}>মি</small></span>
+          <span className="stat-label">মোট সময়</span>
+        </div>
+        <div className="dash-stat-mini">
           <span className="chip chip-streak">🔥 {toBn(stats.streak)} দিন</span>
         </div>
         <div className="dash-stat-mini">
           <span className="chip chip-level">⭐ লেভেল {toBn(level)} ({toBn(xpPct)}%)</span>
+        </div>
+      </div>
+
+      <div className="dash-top-row">
+        <div className="dash-stat-mini">
+          <span className="stat-num">{toBn(quickCounts.favorites)}</span>
+          <span className="stat-label">⭐ ফেভারিট প্রশ্ন</span>
+        </div>
+        <div className="dash-stat-mini">
+          <span className="stat-num">{toBn(quickCounts.topicsRead)}</span>
+          <span className="stat-label">🧭 পঠিত টপিক</span>
+        </div>
+        <div className="dash-stat-mini">
+          <span className="stat-num">{toBn(quickCounts.liveExams)}</span>
+          <span className="stat-label">🔴 লাইভ পরীক্ষা অংশগ্রহণ</span>
         </div>
       </div>
 
@@ -268,6 +329,52 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+          </div>
+
+          <div className="chart-grid" style={{ marginBottom: 20 }}>
+            {weekCompare && (
+              <div className="chart-card">
+                <h3 className="chart-card-title">এই সপ্তাহ বনাম গত সপ্তাহ</h3>
+                <div className="week-compare-row">
+                  <div>
+                    <span className="wc-label">প্রশ্ন চেষ্টা</span>
+                    <span className="wc-value">{toBn(weekCompare.thisWeekQ)}</span>
+                    <span className={`wc-delta ${weekCompare.thisWeekQ >= weekCompare.lastWeekQ ? "up" : "down"}`}>
+                      {weekCompare.thisWeekQ >= weekCompare.lastWeekQ ? "▲" : "▼"} গত সপ্তাহ: {toBn(weekCompare.lastWeekQ)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="wc-label">নির্ভুলতা</span>
+                    <span className="wc-value">{toBn(weekCompare.thisAcc)}%</span>
+                    <span className={`wc-delta ${weekCompare.thisAcc >= weekCompare.lastAcc ? "up" : "down"}`}>
+                      {weekCompare.thisAcc >= weekCompare.lastAcc ? "▲" : "▼"} গত সপ্তাহ: {toBn(weekCompare.lastAcc)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {typeBreakdown && (typeBreakdown.mcq.total > 0 || typeBreakdown.short.total > 0) && (
+              <div className="chart-card">
+                <h3 className="chart-card-title">MCQ বনাম Short Answer</h3>
+                <div className="week-compare-row">
+                  <div>
+                    <span className="wc-label">MCQ</span>
+                    <span className="wc-value">
+                      {typeBreakdown.mcq.total ? toBn(Math.round((typeBreakdown.mcq.correct / typeBreakdown.mcq.total) * 100)) : toBn(0)}%
+                    </span>
+                    <span className="wc-delta">{toBn(typeBreakdown.mcq.correct)}/{toBn(typeBreakdown.mcq.total)} সঠিক</span>
+                  </div>
+                  <div>
+                    <span className="wc-label">Short Answer</span>
+                    <span className="wc-value">
+                      {typeBreakdown.short.total ? toBn(Math.round((typeBreakdown.short.correct / typeBreakdown.short.total) * 100)) : toBn(0)}%
+                    </span>
+                    <span className="wc-delta">{toBn(typeBreakdown.short.correct)}/{toBn(typeBreakdown.short.total)} সঠিক</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {(bestSubject || worstSubject) && (

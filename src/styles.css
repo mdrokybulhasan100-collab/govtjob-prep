@@ -191,6 +191,14 @@ button { font-family: inherit; cursor: pointer; }
 .highlight-name { font-size: 17px; font-weight: 700; color: var(--ink); }
 .highlight-pct { font-family: var(--font-mono); font-size: 13px; color: var(--ink-soft); }
 
+.week-compare-row { display: flex; gap: 28px; margin-top: 10px; }
+.week-compare-row > div { display: flex; flex-direction: column; gap: 3px; }
+.wc-label { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+.wc-value { font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--ink); }
+.wc-delta { font-size: 11.5px; color: var(--ink-soft); }
+.wc-delta.up { color: #067A55; }
+.wc-delta.down { color: var(--rose); }
+
 .topic-progress-list { display: flex; flex-direction: column; gap: 14px; }
 .topic-progress-row { display: flex; align-items: center; gap: 12px; }
 .topic-progress-row .tp-name { flex: 0 0 140px; font-size: 13.5px; font-weight: 600; }
