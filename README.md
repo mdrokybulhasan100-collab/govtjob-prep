@@ -132,6 +132,25 @@ Question যোগ/মুছা এবং প্রশ্ন **JSON দিয়
 `/admin` লিংকে গেলে বা রিফ্রেশ করলেও পেজ ঠিকভাবে লোড হয় — এটা এমনিতেই কাজ করবে,
 আলাদা কিছু সেটাপ করতে হবে না।
 
+## ড্যাশবোর্ড উইজেট — এক্সটার্নাল/ইন্টারঅ্যাক্টিভ কনটেন্ট (নতুন)
+
+ব্যক্তিগত প্রোগ্রেসের বাইরেও ড্যাশবোর্ডে এখন তিনটা উইজেট আছে:
+
+- **🔴 লাইভ পরীক্ষা কাউন্টডাউন** — পরবর্তী নির্ধারিত/চলমান লাইভ পরীক্ষার লাইভ (প্রতি
+  সেকেন্ডে আপডেট হওয়া) কাউন্টডাউন, ক্লিক করলে সরাসরি সেই পাতায় নিয়ে যায়
+- **💡 আজকের ফ্যাক্ট** — প্রতিদিন একটা নির্দিষ্ট GK/কারেন্ট অ্যাফেয়ার্স ফ্যাক্ট (তারিখ
+  অনুযায়ী ঘোরে), সাথে "পরের ফ্যাক্ট →" বাটন দিয়ে আরও দেখা যায় (ইন্টারঅ্যাক্টিভ)
+- **📢 সাম্প্রতিক বিজ্ঞপ্তি** — সরকারি চাকরির বিজ্ঞপ্তি/সার্কুলারের তালিকা, ক্লিকযোগ্য লিংকসহ
+
+এই কনটেন্ট **Admin Panel থেকে ম্যানেজ করা হয়** — `/admin` এ নতুন দুটো ট্যাব যোগ হয়েছে:
+**📢 বিজ্ঞপ্তি** ও **💡 দৈনিক ফ্যাক্ট**। যা যোগ করবেন তা সব ইউজারের ড্যাশবোর্ডে দেখা যাবে
+(এটা ব্যক্তিগত ডেটা না — সবার জন্য কমন কনটেন্ট, প্রশ্ন ব্যাংকের মতোই)।
+
+**চালু করতে migration লাগবে:**
+1. Supabase Dashboard → **SQL Editor** → **New query**
+2. এই রিপোর **`dashboard_extras_migration.sql`** ফাইলের পুরো কনটেন্ট পেস্ট করে **Run** করুন
+   (এটা `announcements` ও `daily_facts` টেবিল বানাবে, সাথে কিছু নমুনা ফ্যাক্ট)
+
 ## ড্যাশবোর্ড রিডিজাইন — এখন চার্ট-ভিত্তিক
 
 ড্যাশবোর্ড সম্পূর্ণ নতুন করে বানানো হয়েছে — গ্রাফ/চার্ট দিয়ে প্রোগ্রেস দেখা যায়:
@@ -427,7 +446,10 @@ src/
   components/
     Login.jsx           — Google লগইন স্ক্রিন
     TopBar.jsx           — নেভিগেশন বার (registry.js থেকে automatically বানে)
-    Dashboard.jsx        — ব্যক্তিগত প্রোগ্রেস + streak/level/badges (শুধু নিজের ডেটা)
+    Dashboard.jsx        — ব্যক্তিগত প্রোগ্রেস, চার্ট, streak/level (শুধু নিজের ডেটা)
+    LiveExamWidget.jsx    — 🔴 লাইভ পরীক্ষা কাউন্টডাউন (ড্যাশবোর্ড উইজেট)
+    AnnouncementsWidget.jsx — 📢 সাম্প্রতিক বিজ্ঞপ্তি (ড্যাশবোর্ড উইজেট)
+    DailyFactWidget.jsx    — 💡 আজকের ফ্যাক্ট (ড্যাশবোর্ড উইজেট)
     PracticeSetup.jsx    — সব বিষয়/একটা বিষয়/একটা টপিক বেছে নেওয়া
     Quiz.jsx             — OMR বাবল-শিট স্টাইলে প্রশ্ন-উত্তর (system view)
     Result.jsx           — সেশন শেষে ফলাফল, celebration + XP (system view)
@@ -441,9 +463,11 @@ src/
     Admin.jsx            — Admin Panel শেল (adminRegistry.js থেকে ট্যাব রেন্ডার করে)
     admin/
       SubjectsTab.jsx, TopicsTab.jsx, ExamsTab.jsx,
-      QuestionsTab.jsx, LiveExamsTab.jsx   — প্রতিটা Admin ট্যাব আলাদা, স্বনির্ভর ফাইল
+      QuestionsTab.jsx, LiveExamsTab.jsx, AnnouncementsTab.jsx,
+      DailyFactsTab.jsx    — প্রতিটা Admin ট্যাব আলাদা, স্বনির্ভর ফাইল
 
 schema.sql              — ডাটাবেজ স্কিমা + RLS প্রাইভেসি নিয়ম (সব migration-সহ, সম্পূর্ণ)
+dashboard_extras_migration.sql — announcements ও daily_facts টেবিল (বিদ্যমান DB থাকলে চালান)
 reset_database.sql      — শুধু এই অ্যাপের টেবিল/ফাংশন মুছে ক্লিন স্লেট বানায় (schema.sql আবার চালানোর আগে)
 admin_migration.sql      — is_admin কলাম ও Admin-only write নিয়ম (schema.sql-এর পরে চালান)
 questions_upgrade_migration.sql — MCQ+Short Answer সাপোর্ট, difficulty বাদ (বিদ্যমান DB থাকলে চালান)

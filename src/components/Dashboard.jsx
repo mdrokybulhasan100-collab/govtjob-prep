@@ -6,6 +6,9 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import { toBn } from "../lib/utils";
 import { useApp } from "../lib/AppContext";
+import LiveExamWidget from "./LiveExamWidget";
+import AnnouncementsWidget from "./AnnouncementsWidget";
+import DailyFactWidget from "./DailyFactWidget";
 
 const XP_PER_LEVEL = 200;
 const COLORS = { correct: "#10B981", wrong: "#EF4444" };
@@ -266,6 +269,12 @@ export default function Dashboard() {
           <span className="stat-num">{toBn(quickCounts.liveExams)}</span>
           <span className="stat-label">🔴 লাইভ পরীক্ষা অংশগ্রহণ</span>
         </div>
+      </div>
+
+      <div className="widget-row">
+        <LiveExamWidget />
+        <DailyFactWidget />
+        <AnnouncementsWidget />
       </div>
 
       {loading ? (

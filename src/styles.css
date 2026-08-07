@@ -199,6 +199,37 @@ button { font-family: inherit; cursor: pointer; }
 .wc-delta.up { color: #067A55; }
 .wc-delta.down { color: var(--rose); }
 
+/* ============================================================
+   DASHBOARD WIDGETS (external/interactive)
+   ============================================================ */
+.widget-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) {
+  .widget-row { grid-template-columns: 1fr; }
+}
+.widget-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+}
+.widget-title { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
+
+.widget-live { background: linear-gradient(135deg, var(--indigo-soft), var(--card)); }
+.widget-live-name { font-size: 14.5px; font-weight: 700; margin: 2px 0 0; }
+.widget-live-status { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.widget-live-status strong { color: var(--indigo-deep); font-family: var(--font-mono); }
+
+.widget-fact { background: linear-gradient(135deg, var(--amber-soft), var(--card)); }
+.widget-fact-text { font-size: 14px; line-height: 1.6; margin: 6px 0 8px; flex: 1; }
+
+.announce-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.announce-list li { display: flex; flex-direction: column; gap: 1px; }
+.announce-list a { font-size: 13.5px; font-weight: 600; color: var(--indigo-deep); text-decoration: none; }
+.announce-list a:hover { text-decoration: underline; }
+.announce-list span:not(.announce-meta) { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.announce-meta { font-size: 11px; color: var(--ink-soft); }
+
 .topic-progress-list { display: flex; flex-direction: column; gap: 14px; }
 .topic-progress-row { display: flex; align-items: center; gap: 12px; }
 .topic-progress-row .tp-name { flex: 0 0 140px; font-size: 13.5px; font-weight: 600; }
