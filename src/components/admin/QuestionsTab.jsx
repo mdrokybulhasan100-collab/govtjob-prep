@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { banglaToLatin } from "../../lib/utils";
 
 const SAMPLE_JSON = `[
   {
@@ -24,7 +25,7 @@ const SAMPLE_JSON = `[
     "question_type": "short",
     "exam_slug": "bcs-44-preli",
     "question_text": "বাংলাদেশের রাজধানীর নাম কী?",
-    "short_answer": "ঢাকা",
+    "short_answer": "ঢাকা, Dhaka, dhaka",
     "explanation": ""
   }
 ]`;
@@ -212,8 +213,22 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
 
       {isShort ? (
         <div className="admin-form">
-          <div className="form-field" style={{ minWidth: 280 }}><label>সঠিক উত্তর</label>
-            <input value={form.short_answer} onChange={(e) => setForm({ ...form, short_answer: e.target.value })} placeholder="যেমন: ঢাকা" />
+          <div className="form-field" style={{ minWidth: 280 }}><label>সঠিক উত্তর (একাধিক গ্রহণযোগ্য বানান কমা দিয়ে দিতে পারেন)</label>
+            <input value={form.short_answer} onChange={(e) => setForm({ ...form, short_answer: e.target.value })} placeholder="যেমন: ঢাকা, Dhaka, dhaka" />
+            {form.short_answer && (
+              <span className="translit-hint">
+                🔤 ইংরেজি উত্তর এমনিতেই স্বয়ংক্রিয়ভাবে গ্রহণযোগ্য হবে (আনুমানিক বানান:{" "}
+                <strong>{banglaToLatin(form.short_answer.split(",")[0].trim())}</strong>)।
+                বানান ভুল মনে হলে{" "}
+                <button
+                  type="button"
+                  className="translit-add-btn"
+                  onClick={() => setForm({ ...form, short_answer: `${form.short_answer}, ${banglaToLatin(form.short_answer.split(",")[0].trim())}` })}
+                >
+                  এখানে যোগ করে ঠিক করে নিন
+                </button>
+              </span>
+            )}
           </div>
           <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
             <input value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />

@@ -1,12 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { toBn } from "../lib/utils";
+import { toBn, banglaToLatin } from "../lib/utils";
 import { useApp } from "../lib/AppContext";
 
 const OPTION_KEYS = ["a", "b", "c", "d"];
 
 function normalize(str) {
   return (str || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// short_answer can contain multiple accepted variants separated by commas,
+// e.g. "ঢাকা, Dhaka, dhaka" — any one matching (after normalizing) counts.
+function acceptedVariants(shortAnswer) {
+  return (shortAnswer || "").split(",").map((v) => v.trim()).filter(Boolean);
+}
+
+function isShortAnswerCorrect(userInput, shortAnswer) {
+  const given = normalize(userInput);
+  const variants = acceptedVariants(shortAnswer);
+  // 1) exact match against any stored variant (admin-provided, e.g. "ঢাকা, Dhaka")
+  if (variants.some((v) => normalize(v) === given)) return true;
+  // 2) automatic fallback: transliterate each Bangla variant to Latin and
+  //    compare, so English answers work even if the admin only stored Bangla
+  return variants.some((v) => normalize(banglaToLatin(v)) === given);
 }
 
 function formatTime(totalSeconds) {
@@ -82,7 +98,7 @@ export default function Quiz() {
     setAnswered(true);
     setSaving(true);
 
-    const isCorrect = normalize(shortInput) === normalize(q.short_answer);
+    const isCorrect = isShortAnswerCorrect(shortInput, q.short_answer);
     setWasCorrect(isCorrect);
     if (isCorrect) setCorrectCount((c) => c + 1);
 
@@ -195,7 +211,7 @@ export default function Quiz() {
             )}
             {answered && (
               <div className={`short-answer-feedback ${wasCorrect ? "ok" : "err"}`}>
-                {wasCorrect ? "✅ সঠিক!" : `❌ সঠিক উত্তর: ${q.short_answer}`}
+                {wasCorrect ? "✅ সঠিক!" : `❌ সঠিক উত্তর: ${acceptedVariants(q.short_answer)[0] || q.short_answer}`}
               </div>
             )}
           </div>

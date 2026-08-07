@@ -284,7 +284,7 @@ where s.slug = 'gk' limit 1;
 insert into public.questions (subject_id, topic_id, exam_id, question_type, question_text, short_answer, explanation)
 select s.id, t.id, null, 'short',
   'বাংলাদেশের রাজধানীর নাম কী?',
-  'ঢাকা', null
+  'ঢাকা, Dhaka, dhaka', null
 from public.subjects s
 join public.topics t on t.subject_id = s.id and t.name_en = 'Bangladesh Affairs' and s.slug = 'gk'
 where s.slug = 'gk' limit 1;

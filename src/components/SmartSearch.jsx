@@ -127,7 +127,12 @@ export function SearchResultCard({ q, isFav, onToggleFavorite }) {
       <p className="search-card-question">{q.question_text}</p>
 
       {q.question_type === "short" ? (
-        <p className="search-card-answer">✅ সঠিক উত্তর: <strong>{q.short_answer}</strong></p>
+        <p className="search-card-answer">
+          ✅ সঠিক উত্তর: <strong>{(q.short_answer || "").split(",")[0].trim()}</strong>
+          {q.short_answer && q.short_answer.includes(",") && (
+            <span style={{ color: "var(--ink-soft)", fontWeight: 400 }}> (এবং আরও গ্রহণযোগ্য বানান)</span>
+          )}
+        </p>
       ) : (
         <div className="search-card-options">
           {["a", "b", "c", "d"].map((key) => (
