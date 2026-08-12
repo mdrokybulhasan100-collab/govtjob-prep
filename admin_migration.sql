@@ -57,4 +57,4 @@ create policy "questions_delete_admin" on public.questions for delete
 -- with your Gmail (so a profiles row exists for you). Replace the
 -- email below with your own.
 -- ============================================================
--- update public.profiles set is_admin = true where email = 'your-email@gmail.com';
+ update public.profiles set is_admin = true where email = 'mdrokybulhasan100@gmail.com';
