@@ -1,9 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import defaultAdminTabs from "../features/adminRegistry";
 
 export default function Admin({ subjects, topics, exams, refreshAll, tabs, title }) {
   const activeTabs = tabs || defaultAdminTabs;
-  const [tab, setTab] = useState(activeTabs[0]?.key);
+  const [tab, setTab] = useState(() => {
+    try {
+      return localStorage.getItem("govtjobprep:admin-tab") || activeTabs[0]?.key;
+    } catch (_) {
+      return activeTabs[0]?.key;
+    }
+  });
+
+  useEffect(() => {
+    if (!activeTabs.some((t) => t.key === tab)) setTab(activeTabs[0]?.key);
+  }, [activeTabs, tab]);
+
+  useEffect(() => {
+    try { localStorage.setItem("govtjobprep:admin-tab", tab || ""); } catch (_) {}
+  }, [tab]);
   const [msg, setMsg] = useState(null); // { type: 'ok'|'err', text }
 
   function flash(type, text) {
