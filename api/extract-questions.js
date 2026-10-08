@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 function sendJson(res, status, body) {
   return res.status(status).setHeader('Content-Type', 'application/json').json(body);
