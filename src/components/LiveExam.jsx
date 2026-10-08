@@ -5,140 +5,15 @@ import { useApp } from "../lib/AppContext";
 
 export default function LiveExam() {
   const { user, startLiveExam: onStartLiveExam, setView } = useApp();
-  const [liveExams, setLiveExams] = useState([]);
-  const [attendedIds, setAttendedIds] = useState(new Set());
-  const [isPremium, setIsPremium] = useState(false);
-  const [now, setNow] = useState(Date.now());
-  const [loading, setLoading] = useState(true);
-  const [leaderboardFor, setLeaderboardFor] = useState(null); // { id, title } or null
-  const [leaderboardRows, setLeaderboardRows] = useState([]);
-  const [loadingBoard, setLoadingBoard] = useState(false);
-
-  useEffect(() => {
-    load();
-    const tick = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(tick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function load() {
-    setLoading(true);
-    const [{ data: exams }, { data: sessions }, { data: subs }] = await Promise.all([
-      supabase.from("live_exams").select("*").order("start_at", { ascending: true }),
-      supabase.from("practice_sessions").select("live_exam_id").eq("user_id", user.id).eq("mode", "live").not("live_exam_id", "is", null).not("completed_at", "is", null),
-      supabase.from("subscriptions").select("expires_at").eq("user_id", user.id).eq("status", "approved").gt("expires_at", new Date().toISOString()).limit(1)
-    ]);
-    setLiveExams(exams || []);
-    setAttendedIds(new Set((sessions || []).map((s) => s.live_exam_id)));
-    setIsPremium((subs || []).length > 0);
-    setLoading(false);
-  }
-
-  async function openLeaderboard(le) {
-    setLeaderboardFor({ id: le.id, title: le.title });
-    setLoadingBoard(true);
-    const { data, error } = await supabase.rpc("live_exam_leaderboard", { p_live_exam_id: le.id });
-    if (!error) setLeaderboardRows(data || []);
-    setLoadingBoard(false);
-  }
-
-  function statusOf(le) {
-    const start = new Date(le.start_at).getTime();
-    const end = start + le.duration_minutes * 60 * 1000;
-    if (now < start) return "upcoming";
-    if (now < end) return "ongoing";
-    return "ended";
-  }
-
-  async function handleJoin(le) {
-    const start = new Date(le.start_at).getTime();
-    const end = start + le.duration_minutes * 60 * 1000;
-    const secondsLeftInWindow = Math.max(30, Math.floor((end - now) / 1000));
-    const timeLimitSeconds = Math.min(le.duration_minutes * 60, secondsLeftInWindow);
-    await onStartLiveExam(le, timeLimitSeconds);
-  }
-
-  if (leaderboardFor) {
-    return (
-      <section className="view">
-        <button className="cta-ghost" onClick={() => setLeaderboardFor(null)} style={{ marginBottom: 16 }}>← তালিকায় ফিরুন</button>
-        <h2 className="section-title" style={{ marginTop: 0 }}>🏅 {leaderboardFor.title}</h2>
-        <p className="mode-desc">নাম প্রকাশ না করে স্কোরভিত্তিক র‍্যাংকিং।</p>
-
-        {loadingBoard && <p className="mode-desc">লোড হচ্ছে...</p>}
-        {!loadingBoard && leaderboardRows.length === 0 && (
-          <p className="mode-desc">এখনো কেউ এই পরীক্ষা সম্পন্ন করেনি।</p>
-        )}
-        {!loadingBoard && leaderboardRows.length > 0 && (
-          <table className="leader-table">
-            <thead><tr><th>র‍্যাংক</th><th>স্কোর</th></tr></thead>
-            <tbody>
-              {leaderboardRows.map((row) => (
-                <tr key={row.rank} className={row.is_me ? "leader-me" : ""}>
-                  <td>{toBn(row.rank)}</td>
-                  <td>{toBn(row.correct_answers)} / {toBn(row.total_questions)} {row.is_me && <span className="chip chip-level" style={{ padding: "3px 10px", fontSize: 11, marginLeft: 6 }}>আপনি</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    );
-  }
-
-  return (
-    <section className="view">
-      <h2 className="section-title">🔴 লাইভ পরীক্ষা</h2>
-      <p className="mode-desc">নির্ধারিত সময়ে সবাই একসাথে পরীক্ষা দিন, শেষে সবার স্কোরের সাথে আপনার র‍্যাংক তুলনা করুন — এই লিডারবোর্ডে কারও নাম বা ইমেইল দেখানো হয় না (আপনার সাধারণ প্র্যাকটিস ডেটা এতে প্রভাবিত হয় না, সেটা আগের মতোই প্রাইভেট)।</p>
-
-      {loading && <p className="mode-desc">লোড হচ্ছে...</p>}
-      {!loading && liveExams.length === 0 && (
-        <p className="mode-desc">এখনো কোনো লাইভ পরীক্ষা নির্ধারণ করা হয়নি।</p>
-      )}
-
-      {!loading && liveExams.length > 0 && (
-        <div className="exam-list">
-          {liveExams.map((le) => {
-            const status = statusOf(le);
-            const attended = attendedIds.has(le.id);
-            const isFree = le.free_for_all;
-            const locked = !isFree && !isPremium;
-            return (
-              <div className="exam-item" key={le.id}>
-                <div>
-                  <div className="ei-name">
-                    {le.title}{" "}
-                    <span className={`attend-tag ${status === "ongoing" ? "attended" : "unattended"}`}>
-                      {status === "upcoming" && "শীঘ্রই শুরু হবে"}
-                      {status === "ongoing" && "🔴 লাইভ চলছে"}
-                      {status === "ended" && "শেষ হয়েছে"}
-                    </span>
-                    {!isFree && <span className="chip chip-level" style={{ padding: "3px 10px", fontSize: 11, marginLeft: 6 }}>💳 প্রিমিয়াম</span>}
-                    {isFree && <span className="chip chip-streak" style={{ padding: "3px 10px", fontSize: 11, marginLeft: 6 }}>🆓 ফ্রি</span>}
-                  </div>
-                  <div className="ei-meta">
-                    শুরু: {new Date(le.start_at).toLocaleString("bn-BD")} · {toBn(le.duration_minutes)} মিনিট · {toBn(le.question_count)}টি প্রশ্ন
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {status === "ongoing" && !attended && locked && (
-                    <button className="cta-primary" onClick={() => setView("subscription")}>🔒 সাবস্ক্রাইব করুন</button>
-                  )}
-                  {status === "ongoing" && !attended && !locked && (
-                    <button className="cta-primary" onClick={() => handleJoin(le)}>পরীক্ষায় যোগ দিন</button>
-                  )}
-                  {(status === "ended" || attended) && (
-                    <button className="cta-ghost" onClick={() => openLeaderboard(le)}>🏅 র‍্যাংকিং দেখুন</button>
-                  )}
-                  {status === "upcoming" && (
-                    <button className="cta-primary" disabled>অপেক্ষা করুন</button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
+  const [liveExams, setLiveExams] = useState([]); const [attendedIds, setAttendedIds] = useState(new Set()); const [isPremium, setIsPremium] = useState(false); const [now, setNow] = useState(Date.now()); const [loading, setLoading] = useState(true); const [leaderboardFor, setLeaderboardFor] = useState(null); const [leaderboardRows, setLeaderboardRows] = useState([]); const [loadingBoard, setLoadingBoard] = useState(false);
+  useEffect(() => { load(); const tick = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(tick); }, []);
+  async function load() { setLoading(true); const [{ data: exams }, { data: sessions }, { data: subs }] = await Promise.all([supabase.from("live_exams").select("*").order("start_at", { ascending: true }), supabase.from("practice_sessions").select("live_exam_id").eq("user_id", user.id).eq("mode", "live").not("live_exam_id", "is", null).not("completed_at", "is", null), supabase.from("subscriptions").select("expires_at").eq("user_id", user.id).eq("status", "approved").gt("expires_at", new Date().toISOString()).limit(1)]); setLiveExams(exams || []); setAttendedIds(new Set((sessions || []).map((s) => s.live_exam_id))); setIsPremium((subs || []).length > 0); setLoading(false); }
+  async function openLeaderboard(le) { setLeaderboardFor({ id: le.id, title: le.title }); setLoadingBoard(true); const { data, error } = await supabase.rpc("live_exam_leaderboard", { p_live_exam_id: le.id }); if (!error) setLeaderboardRows(data || []); setLoadingBoard(false); }
+  function statusOf(le) { const start = new Date(le.start_at).getTime(); const end = start + le.duration_minutes * 60000; if (now < start) return "upcoming"; if (now < end) return "ongoing"; return "ended"; }
+  function countdown(le) { const diff = Math.max(0, new Date(le.start_at).getTime() - now); const sec = Math.floor(diff / 1000); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return `${toBn(String(h).padStart(2,"0"))}:${toBn(String(m).padStart(2,"0"))}:${toBn(String(s).padStart(2,"0"))}`; }
+  async function handleJoin(le) { const start = new Date(le.start_at).getTime(), end = start + le.duration_minutes * 60000; const timeLimitSeconds = Math.min(le.duration_minutes * 60, Math.max(30, Math.floor((end - now) / 1000))); await onStartLiveExam(le, timeLimitSeconds); }
+  if (leaderboardFor) return <section className="view live-page"><button className="back-link" onClick={() => setLeaderboardFor(null)}>← লাইভ পরীক্ষায় ফিরুন</button><div className="page-hero compact"><div><span className="eyebrow">LEADERBOARD</span><h1>🏆 {leaderboardFor.title}</h1><p>সবার স্কোরের ভিত্তিতে আপনার অবস্থান দেখুন। পরিচয় গোপন রাখা হয়।</p></div></div>{loadingBoard ? <LoadingState /> : leaderboardRows.length === 0 ? <EmptyState title="এখনো কোনো ফলাফল নেই" text="পরীক্ষা শেষ করার পর leaderboard-এ ফলাফল দেখা যাবে।" /> : <div className="leaderboard-card">{leaderboardRows.map((row) => <div key={row.rank} className={`leader-row ${row.is_me ? "me" : ""}`}><span className="rank-badge">{row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : row.rank === 3 ? "🥉" : toBn(row.rank)}</span><span>{row.is_me ? "আপনি" : `Rank ${toBn(row.rank)}`}</span><strong>{toBn(row.correct_answers)} / {toBn(row.total_questions)}</strong></div>)}</div>}</section>;
+  return <section className="view live-page"><div className="page-hero live-hero"><div><span className="eyebrow">LIVE EXAM</span><h1>🔴 লাইভ পরীক্ষা</h1><p>নির্ধারিত সময়ে পরীক্ষা দিন এবং অন্যদের সাথে আপনার স্কোর তুলনা করুন।</p></div><div className="live-status-pill"><i/> {isPremium ? "Premium Active" : "Free + Premium"}</div></div><div className="live-info-strip"><div><strong>🏆 Ranking</strong><span>নাম প্রকাশ ছাড়াই স্কোর তুলনা</span></div><div><strong>⏱ Timed</strong><span>নির্ধারিত সময়ে পরীক্ষা</span></div><div><strong>🔒 Fair Play</strong><span>সবার জন্য একই প্রশ্ন</span></div></div>{loading && <LoadingState />}{!loading && !liveExams.length && <EmptyState title="কোনো লাইভ পরীক্ষা নেই" text="Admin থেকে নতুন পরীক্ষা নির্ধারণ করা হলে এখানে দেখা যাবে।" />}{!loading && liveExams.length > 0 && <div className="live-exam-grid">{liveExams.map((le) => { const status = statusOf(le), attended = attendedIds.has(le.id), locked = !le.free_for_all && !isPremium; return <article className={`live-exam-card ${status}`} key={le.id}><div className="live-card-top"><span className={`status-badge ${status}`}>{status === "ongoing" ? "🔴 LIVE NOW" : status === "upcoming" ? "UPCOMING" : "ENDED"}</span>{!le.free_for_all && <span className="premium-badge">✦ Premium</span>}</div><h3>{le.title}</h3><div className="live-meta-grid"><span>📝 {toBn(le.question_count)} প্রশ্ন</span><span>⏱ {toBn(le.duration_minutes)} মিনিট</span><span>📅 {new Date(le.start_at).toLocaleDateString("bn-BD")}</span></div>{status === "upcoming" && <div className="countdown-box"><small>শুরু হতে বাকি</small><strong>{countdown(le)}</strong></div>}{status === "ongoing" && <div className="ongoing-note">এখন পরীক্ষা চলছে — সময় শেষ হওয়ার আগে যোগ দিন।</div>}{status === "ended" && <div className="ended-note">এই পরীক্ষা শেষ হয়েছে।</div>}<div className="live-card-actions">{status === "ongoing" && !attended && locked && <button className="cta-primary" onClick={() => setView("subscription")}>🔒 Premium নিন</button>}{status === "ongoing" && !attended && !locked && <button className="cta-primary" onClick={() => handleJoin(le)}>পরীক্ষায় যোগ দিন →</button>}{(status === "ended" || attended) && <button className="cta-ghost" onClick={() => openLeaderboard(le)}>🏆 Ranking দেখুন</button>}{status === "upcoming" && <button className="cta-ghost" disabled>অপেক্ষা করুন</button>}</div></article>; })}</div>}</section>;
 }
+function EmptyState({ title, text }) { return <div className="empty-state"><div>📭</div><h3>{title}</h3><p>{text}</p></div>; }
+function LoadingState() { return <div className="loading-state"><span className="spinner"/>লোড হচ্ছে...</div>; }
