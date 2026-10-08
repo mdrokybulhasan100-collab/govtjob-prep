@@ -41,6 +41,12 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
   const [editingId, setEditingId] = useState(null);
   const [jsonText, setJsonText] = useState(SAMPLE_JSON);
   const [uploading, setUploading] = useState(false);
+  const [bookImages, setBookImages] = useState([]);
+  const [extractedQuestions, setExtractedQuestions] = useState([]);
+  const [extracting, setExtracting] = useState(false);
+  const [bookSubjectId, setBookSubjectId] = useState("");
+  const [bookTopicId, setBookTopicId] = useState("");
+  const [bookExamId, setBookExamId] = useState("");
 
   const [questions, setQuestions] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -139,6 +145,133 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
       setForm({ ...form, question_text: "", option_a: "", option_b: "", option_c: "", option_d: "", short_answer: "", explanation: "" });
     }
     loadQuestions();
+  }
+
+  function compressImage(file, maxSide = 1800, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("ছবি পড়তে সমস্যা হয়েছে"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("ছবিটি পড়া যায়নি"));
+        img.onload = () => {
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (!blob) return reject(new Error("ছবি compress করা যায়নি"));
+            const r = new FileReader();
+            r.onload = () => resolve({
+              mimeType: "image/jpeg",
+              data: String(r.result).split(",")[1],
+              previewUrl: URL.createObjectURL(blob),
+              name: file.name
+            });
+            r.onerror = () => reject(new Error("ছবি প্রস্তুত করা যায়নি"));
+            r.readAsDataURL(blob);
+          }, "image/jpeg", quality);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleBookImages(e) {
+    const files = Array.from(e.target.files || []).slice(0, 10);
+    if (!files.length) return;
+    setExtractedQuestions([]);
+    try {
+      const prepared = [];
+      for (const file of files) prepared.push(await compressImage(file));
+      setBookImages(prepared);
+    } catch (err) {
+      flash("err", err.message);
+    } finally {
+      e.target.value = "";
+    }
+  }
+
+  async function extractFromBook() {
+    if (!bookImages.length) return flash("err", "আগে বইয়ের ছবি নির্বাচন করুন");
+    setExtracting(true);
+    try {
+      const all = [];
+      for (let i = 0; i < bookImages.length; i++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error("Session expired. আবার login করুন।");
+        const res = await fetch("/api/extract-questions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ image: { mimeType: bookImages[i].mimeType, data: bookImages[i].data } })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(`পৃষ্ঠা ${i + 1}: ${data.error || "extract failed"}`);
+        all.push(...(data.questions || []).map((q) => ({ ...q, _sourcePage: i + 1 })));
+      }
+      setExtractedQuestions(all);
+      flash("ok", `${all.length}টি প্রশ্ন extract হয়েছে। Upload করার আগে দেখে নিন।`);
+    } catch (err) {
+      flash("err", err.message);
+    } finally {
+      setExtracting(false);
+    }
+  }
+
+  function updateExtracted(index, key, value) {
+    setExtractedQuestions((prev) => prev.map((q, i) => i === index ? { ...q, [key]: value } : q));
+  }
+
+  function removeExtracted(index) {
+    setExtractedQuestions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function uploadExtractedQuestions() {
+    if (!extractedQuestions.length) return flash("err", "আগে প্রশ্ন extract করুন");
+    setUploading(true);
+    try {
+      const rows = [];
+      const skipped = [];
+      extractedQuestions.forEach((q, i) => {
+        const type = q.question_type === "short" ? "short" : "mcq";
+        if (!q.question_text) { skipped.push(`#${i + 1}: প্রশ্ন নেই`); return; }
+        if (type === "short" && !q.short_answer) { skipped.push(`#${i + 1}: সঠিক উত্তর নেই`); return; }
+        if (type === "mcq" && (!q.option_a || !q.option_b || !q.option_c || !q.option_d || !q.correct_option)) {
+          skipped.push(`#${i + 1}: ৪টি অপশন ও সঠিক উত্তর দিন`); return;
+        }
+        rows.push({
+          subject_id: bookSubjectId || null,
+          topic_id: bookTopicId || null,
+          exam_id: bookExamId || null,
+          question_type: type,
+          question_text: q.question_text.trim(),
+          option_a: type === "mcq" ? q.option_a : null,
+          option_b: type === "mcq" ? q.option_b : null,
+          option_c: type === "mcq" ? q.option_c : null,
+          option_d: type === "mcq" ? q.option_d : null,
+          correct_option: type === "mcq" ? q.correct_option : null,
+          short_answer: type === "short" ? q.short_answer : null,
+          explanation: q.explanation || null
+        });
+      });
+      if (!rows.length) throw new Error("Upload করার মতো valid প্রশ্ন নেই।");
+      const { error } = await supabase.from("questions").insert(rows);
+      if (error) throw error;
+      flash("ok", `${rows.length}টি প্রশ্ন সফলভাবে যোগ হয়েছে।` + (skipped.length ? ` ${skipped.length}টি বাদ গেছে।` : ""));
+      setExtractedQuestions([]);
+      setBookImages([]);
+      loadQuestions();
+    } catch (err) {
+      flash("err", "প্রশ্ন upload করতে সমস্যা: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function bulkUpload() {
@@ -354,6 +487,73 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
             ))}
           </tbody>
         </table>
+      )}
+
+      <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
+
+      <h3>📷 বইয়ের ছবি থেকে প্রশ্ন যোগ করুন</h3>
+      <p className="mode-desc">
+        বইয়ের MCQ/প্রশ্নের পরিষ্কার ছবি দিন। AI প্রশ্ন, ৪টি অপশন ও উত্তর extract করবে।
+        <strong> Upload করার আগে প্রতিটি প্রশ্ন দেখে/সংশোধন করে নিন।</strong> সর্বোচ্চ ১০টি page একসাথে নেওয়া যাবে।
+      </p>
+      <div className="admin-form">
+        <div className="form-field"><label>বিষয় (সব extracted প্রশ্নে প্রযোজ্য)</label>
+          <select value={bookSubjectId} onChange={(e) => { setBookSubjectId(e.target.value); setBookTopicId(""); }}>
+            <option value="">কোনোটা না</option>
+            {subjects.map((s) => <option key={s.id} value={s.id}>{s.name_bn}</option>)}
+          </select>
+        </div>
+        <div className="form-field"><label>টপিক (ঐচ্ছিক)</label>
+          <select value={bookTopicId} onChange={(e) => setBookTopicId(e.target.value)}>
+            <option value="">কোনোটা না</option>
+            {topics.filter((t) => t.subject_id === bookSubjectId).map((t) => <option key={t.id} value={t.id}>{t.name_bn}</option>)}
+          </select>
+        </div>
+        <div className="form-field"><label>প্রশ্নপত্র (ঐচ্ছিক)</label>
+          <select value={bookExamId} onChange={(e) => setBookExamId(e.target.value)}>
+            <option value="">কোনোটা না</option>
+            {exams.map((ex) => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="form-field">
+        <label>বইয়ের পেজের ছবি</label>
+        <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleBookImages} />
+      </div>
+      {bookImages.length > 0 && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "12px 0" }}>
+          {bookImages.map((img, i) => <div key={i} style={{ width: 110, fontSize: 12 }}><img src={img.previewUrl} alt={`পৃষ্ঠা ${i + 1}`} style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} /><div>পৃষ্ঠা {i + 1}</div></div>)}
+        </div>
+      )}
+      <button className="cta-primary" disabled={extracting || !bookImages.length} onClick={extractFromBook}>
+        {extracting ? "AI দিয়ে প্রশ্ন বের হচ্ছে..." : "📷 ছবি থেকে প্রশ্ন Extract করুন"}
+      </button>
+
+      {extractedQuestions.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <h4 style={{ marginBottom: 8 }}>Extracted প্রশ্ন ({extractedQuestions.length}) — Upload-এর আগে যাচাই করুন</h4>
+          {extractedQuestions.map((q, i) => (
+            <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 14, marginBottom: 12, background: "var(--surface, #fff)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <strong>#{i + 1} · {q.question_type === "short" ? "Short" : "MCQ"} · পৃষ্ঠা {q._sourcePage}</strong>
+                <button className="cta-danger" onClick={() => removeExtracted(i)}>বাদ দিন</button>
+              </div>
+              <div className="form-field"><label>প্রশ্ন</label><textarea value={q.question_text} onChange={(e) => updateExtracted(i, "question_text", e.target.value)} /></div>
+              {q.question_type === "mcq" ? <>
+                <div className="admin-form">
+                  {['a','b','c','d'].map((o) => <div className="form-field" key={o}><label>অপশন {o.toUpperCase()}</label><input value={q[`option_${o}`] || ""} onChange={(e) => updateExtracted(i, `option_${o}`, e.target.value)} /></div>)}
+                </div>
+                <div className="admin-form">
+                  <div className="form-field" style={{ maxWidth: 160 }}><label>সঠিক উত্তর</label><select value={q.correct_option || ""} onChange={(e) => updateExtracted(i, "correct_option", e.target.value)}><option value="">নির্বাচন করুন</option><option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option></select></div>
+                  <div className="form-field"><label>ব্যাখ্যা</label><input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} /></div>
+                </div>
+              </> : <div className="form-field"><label>সঠিক উত্তর</label><input value={q.short_answer || ""} onChange={(e) => updateExtracted(i, "short_answer", e.target.value)} /></div>}
+            </div>
+          ))}
+          <button className="cta-primary" disabled={uploading} onClick={uploadExtractedQuestions}>
+            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি Extracted প্রশ্ন Upload করুন`}
+          </button>
+        </div>
       )}
 
       <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
