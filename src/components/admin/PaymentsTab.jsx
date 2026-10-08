@@ -18,36 +18,17 @@ export default function PaymentsTab({ flash }) {
     setLoading(true);
     setLoadError("");
 
-    // Load subscriptions separately from profiles. A nested PostgREST
-    // relation can fail when profiles RLS blocks the embedded relation,
-    // which previously made the whole payment list appear empty.
-    const { data: subs, error: subsError } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data: subs, error: subsError } = await supabase.rpc("admin_list_subscriptions");
 
     if (subsError) {
       setSubscriptions([]);
       setLoadError(`পেমেন্ট লোড করা যায়নি: ${subsError.message}`);
     } else {
-      const rows = subs || [];
-      const userIds = [...new Set(rows.map((row) => row.user_id).filter(Boolean))];
-      let profileMap = {};
-
-      if (userIds.length) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", userIds);
-
-        if (!profilesError) {
-          profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
-        }
-      }
-
-      setSubscriptions(rows.map((row) => ({
+      setSubscriptions((subs || []).map((row) => ({
         ...row,
-        profiles: profileMap[row.user_id] || null
+        profiles: row.full_name || row.email
+          ? { full_name: row.full_name, email: row.email }
+          : null
       })));
     }
 
