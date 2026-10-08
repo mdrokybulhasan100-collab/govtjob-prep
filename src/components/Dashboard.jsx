@@ -238,218 +238,102 @@ export default function Dashboard() {
   ];
 
   return (
-    <section className="view">
-      <div className="dash-top-row">
-        <div className="dash-stat-mini">
-          <span className="stat-num">{toBn(stats.totalQ)}</span>
-          <span className="stat-label">মোট প্রশ্ন</span>
+    <section className="view dashboard-view">
+      <div className="dashboard-welcome">
+        <div className="welcome-copy">
+          <span className="eyebrow">🎯 আপনার প্রস্তুতির কেন্দ্র</span>
+          <h1>আজও একটু এগিয়ে যান{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(" ")[0]}` : ""}!</h1>
+          <p>নিয়মিত অনুশীলন, নিজের দুর্বল বিষয় চিহ্নিত করা এবং প্রতিদিনের অগ্রগতি ধরে রাখাই সাফল্যের চাবিকাঠি।</p>
+          <div className="welcome-actions">
+            <button className="cta-primary dashboard-primary" onClick={() => setView("practice")}>প্র্যাকটিস শুরু করুন <span>→</span></button>
+            <button className="dashboard-secondary" onClick={() => setView("quizbuilder")}>কুইজ তৈরি করুন</button>
+          </div>
         </div>
-        <div className="dash-stat-mini">
-          <span className="stat-num">{toBn(stats.sessions)}</span>
-          <span className="stat-label">সেশন</span>
-        </div>
-        <div className="dash-stat-mini">
-          <span className="stat-num">{stats.accuracy}%</span>
-          <span className="stat-label">নির্ভুলতা</span>
-        </div>
-        <div className="dash-stat-mini">
-          <span className="stat-num">{toBn(Math.floor(studyMinutes / 60))}<small style={{ fontSize: 12 }}>ঘ</small> {toBn(studyMinutes % 60)}<small style={{ fontSize: 12 }}>মি</small></span>
-          <span className="stat-label">মোট সময়</span>
-        </div>
-        <div className="dash-stat-mini">
-          <span className="chip chip-streak">🔥 {toBn(stats.streak)} দিন</span>
-        </div>
-        <div className="dash-stat-mini">
-          <span className="chip chip-level">⭐ লেভেল {toBn(level)} ({toBn(xpPct)}%)</span>
-        </div>
-      </div>
-
-      <div className="dash-top-row">
-        <div className="dash-stat-mini">
-          <span className="stat-num">{toBn(quickCounts.favorites)}</span>
-          <span className="stat-label">🔖 রিভিশন লিস্ট</span>
-        </div>
-        <div className="dash-stat-mini">
-          <span className="stat-num">{toBn(quickCounts.liveExams)}</span>
-          <span className="stat-label">🔴 লাইভ পরীক্ষা অংশগ্রহণ</span>
+        <div className="welcome-progress">
+          <div className="progress-ring-large">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="50" className="ring-track" />
+              <circle cx="60" cy="60" r="50" className="ring-fill" style={{ strokeDashoffset: 314 - (314 * Math.min(xpPct, 100)) / 100 }} />
+            </svg>
+            <div><strong>{toBn(xpPct)}%</strong><span>লেভেল প্রগ্রেস</span></div>
+          </div>
+          <div className="welcome-level">
+            <span>⭐ বর্তমান লেভেল</span>
+            <strong>{toBn(level)}</strong>
+            <small>{toBn(stats.xp)} XP অর্জিত</small>
+          </div>
         </div>
       </div>
 
-      <div className="widget-row">
+      <div className="dashboard-stats">
+        <div className="dashboard-stat stat-blue"><span className="stat-icon">📝</span><div><strong>{toBn(stats.totalQ)}</strong><span>মোট প্রশ্ন</span></div></div>
+        <div className="dashboard-stat stat-green"><span className="stat-icon">✓</span><div><strong>{toBn(stats.accuracy)}%</strong><span>নির্ভুলতা</span></div></div>
+        <div className="dashboard-stat stat-orange"><span className="stat-icon">🔥</span><div><strong>{toBn(stats.streak)}</strong><span>দিনের স্ট্রিক</span></div></div>
+        <div className="dashboard-stat stat-purple"><span className="stat-icon">⏱</span><div><strong>{toBn(Math.floor(studyMinutes / 60))}<small>ঘ</small> {toBn(studyMinutes % 60)}<small>মি</small></strong><span>মোট পড়ার সময়</span></div></div>
+      </div>
+
+      <div className="dashboard-quick-grid">
+        <button className="quick-action" onClick={() => setView("practice")}><span className="quick-icon">📚</span><span><strong>প্র্যাকটিস</strong><small>বিষয় বা টপিক বেছে অনুশীলন</small></span><b>→</b></button>
+        <button className="quick-action" onClick={() => setView("quizbuilder")}><span className="quick-icon">🎛️</span><span><strong>কুইজ বিল্ডার</strong><small>নিজের মতো প্রশ্ন সেট করুন</small></span><b>→</b></button>
+        <button className="quick-action" onClick={() => setView("favorites")}><span className="quick-icon">🔖</span><span><strong>রিভিশন লিস্ট</strong><small>{toBn(quickCounts.favorites)}টি প্রশ্ন অপেক্ষায়</small></span><b>→</b></button>
+        <button className="quick-action" onClick={() => setView("exams")}><span className="quick-icon">📁</span><span><strong>পরীক্ষা আর্কাইভ</strong><small>আগের পরীক্ষাগুলো আবার দিন</small></span><b>→</b></button>
+      </div>
+
+      <div className="dashboard-section-head">
+        <div><span className="eyebrow">LIVE & UPDATE</span><h2>আজকের আপডেট</h2></div>
+        <span className="section-note">আপনার প্রস্তুতির গুরুত্বপূর্ণ তথ্য</span>
+      </div>
+      <div className="widget-row dashboard-widgets">
         <LiveExamWidget />
         <DailyFactWidget />
         <AnnouncementsWidget />
       </div>
 
       {loading ? (
-        <p className="mode-desc">লোড হচ্ছে...</p>
+        <div className="dashboard-empty"><div className="loading-dot">●</div><p>আপনার অগ্রগতির তথ্য লোড হচ্ছে...</p></div>
       ) : stats.totalQ === 0 ? (
-        <div className="chart-card">
-          <p className="mode-desc">এখনো কোনো প্র্যাকটিস করেননি — প্রথম কুইজ দিলেই এখানে গ্রাফ দেখা শুরু হবে।</p>
-          <button className="cta-primary" onClick={() => setView("practice")}>প্র্যাকটিস শুরু করুন →</button>
+        <div className="dashboard-empty dashboard-empty-cta">
+          <span>🚀</span><h2>আপনার প্রস্তুতি শুরু করার সময় এখনই</h2><p>প্রথম কুইজ শেষ করলেই এখানে আপনার পারফরম্যান্স, গ্রাফ এবং দুর্বল বিষয়গুলো দেখা যাবে।</p>
+          <button className="cta-primary" onClick={() => setView("practice")}>প্রথম প্র্যাকটিস শুরু করুন →</button>
         </div>
       ) : (
         <>
-          <h2 className="section-title">গত ১৪ দিনের অ্যাক্টিভিটি</h2>
-          <div className="chart-card">
-            <ResponsiveContainer width="100%" height={220}>
+          <div className="dashboard-section-head analytics-head">
+            <div><span className="eyebrow">YOUR ANALYTICS</span><h2>আপনার অগ্রগতি</h2></div>
+            <span className="section-note">শেষ ১৪ দিনের পারফরম্যান্স</span>
+          </div>
+
+          <div className="chart-card analytics-main-card">
+            <div className="card-heading-row"><div><h3>প্রশ্ন সমাধানের ধারাবাহিকতা</h3><p>প্রতিদিন কতগুলো প্রশ্ন সমাধান করেছেন</p></div><span className="mini-badge">১৪ দিন</span></div>
+            <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="qFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5F3" />
+                <defs><linearGradient id="qFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4F46E5" stopOpacity={0.25} /><stop offset="95%" stopColor="#4F46E5" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E7E5F3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6B667F" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: "#6B667F" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E7E5F3", fontSize: 13 }} />
-                <Area type="monotone" dataKey="প্রশ্ন" stroke="#4F46E5" strokeWidth={2} fill="url(#qFill)" />
+                <YAxis tick={{ fontSize: 12, fill: "#6B667F" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #E7E5F3", fontSize: 13 }} />
+                <Area type="monotone" dataKey="প্রশ্ন" stroke="#4F46E5" strokeWidth={3} fill="url(#qFill)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="chart-grid">
-            <div className="chart-card">
-              <h3 className="chart-card-title">বিষয়ভিত্তিক সঠিক/ভুল</h3>
-              {subjectData.length === 0 ? (
-                <p className="mode-desc">এখনো কোনো বিষয়ভিত্তিক ডেটা নেই।</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={subjectData} layout="vertical" margin={{ left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E7E5F3" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12, fill: "#6B667F" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: "#1E1B3A" }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E7E5F3", fontSize: 13 }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="সঠিক" stackId="a" fill={COLORS.correct} radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="ভুল" stackId="a" fill={COLORS.wrong} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+          <div className="chart-grid dashboard-chart-grid">
+            <div className="chart-card"><div className="card-heading-row"><div><h3>বিষয়ভিত্তিক ফলাফল</h3><p>কোথায় ভালো করছেন, কোথায় আরও অনুশীলন দরকার</p></div></div>
+              {subjectData.length === 0 ? <p className="mode-desc">এখনো কোনো বিষয়ভিত্তিক ডেটা নেই।</p> : <ResponsiveContainer width="100%" height={280}><BarChart data={subjectData} layout="vertical" margin={{ left: 10, right: 10 }}><CartesianGrid strokeDasharray="3 3" stroke="#E7E5F3" horizontal={false} /><XAxis type="number" tick={{ fontSize: 12, fill: "#6B667F" }} axisLine={false} tickLine={false} allowDecimals={false} /><YAxis type="category" dataKey="name" width={115} tick={{ fontSize: 12, fill: "#1E1B3A" }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E7E5F3", fontSize: 13 }} /><Legend wrapperStyle={{ fontSize: 12 }} /><Bar dataKey="সঠিক" stackId="a" fill={COLORS.correct} radius={[4, 0, 0, 4]} /><Bar dataKey="ভুল" stackId="a" fill={COLORS.wrong} radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer>}
             </div>
-
-            <div className="chart-card">
-              <h3 className="chart-card-title">সামগ্রিক ফলাফল</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={3}>
-                    <Cell fill={COLORS.correct} />
-                    <Cell fill={COLORS.wrong} />
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E7E5F3", fontSize: 13 }} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <div className="chart-card"><div className="card-heading-row"><div><h3>সামগ্রিক ফলাফল</h3><p>সঠিক ও ভুল উত্তরের অনুপাত</p></div></div><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" innerRadius={65} outerRadius={95} paddingAngle={4}><Cell fill={COLORS.correct} /><Cell fill={COLORS.wrong} /></Pie><Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E7E5F3", fontSize: 13 }} /><Legend wrapperStyle={{ fontSize: 12 }} /></PieChart></ResponsiveContainer></div>
           </div>
 
-          <div className="chart-grid" style={{ marginBottom: 20 }}>
-            {weekCompare && (
-              <div className="chart-card">
-                <h3 className="chart-card-title">এই সপ্তাহ বনাম গত সপ্তাহ</h3>
-                <div className="week-compare-row">
-                  <div>
-                    <span className="wc-label">প্রশ্ন চেষ্টা</span>
-                    <span className="wc-value">{toBn(weekCompare.thisWeekQ)}</span>
-                    <span className={`wc-delta ${weekCompare.thisWeekQ >= weekCompare.lastWeekQ ? "up" : "down"}`}>
-                      {weekCompare.thisWeekQ >= weekCompare.lastWeekQ ? "▲" : "▼"} গত সপ্তাহ: {toBn(weekCompare.lastWeekQ)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="wc-label">নির্ভুলতা</span>
-                    <span className="wc-value">{toBn(weekCompare.thisAcc)}%</span>
-                    <span className={`wc-delta ${weekCompare.thisAcc >= weekCompare.lastAcc ? "up" : "down"}`}>
-                      {weekCompare.thisAcc >= weekCompare.lastAcc ? "▲" : "▼"} গত সপ্তাহ: {toBn(weekCompare.lastAcc)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {typeBreakdown && (typeBreakdown.mcq.total > 0 || typeBreakdown.short.total > 0) && (
-              <div className="chart-card">
-                <h3 className="chart-card-title">MCQ বনাম Short Answer</h3>
-                <div className="week-compare-row">
-                  <div>
-                    <span className="wc-label">MCQ</span>
-                    <span className="wc-value">
-                      {typeBreakdown.mcq.total ? toBn(Math.round((typeBreakdown.mcq.correct / typeBreakdown.mcq.total) * 100)) : toBn(0)}%
-                    </span>
-                    <span className="wc-delta">{toBn(typeBreakdown.mcq.correct)}/{toBn(typeBreakdown.mcq.total)} সঠিক</span>
-                  </div>
-                  <div>
-                    <span className="wc-label">Short Answer</span>
-                    <span className="wc-value">
-                      {typeBreakdown.short.total ? toBn(Math.round((typeBreakdown.short.correct / typeBreakdown.short.total) * 100)) : toBn(0)}%
-                    </span>
-                    <span className="wc-delta">{toBn(typeBreakdown.short.correct)}/{toBn(typeBreakdown.short.total)} সঠিক</span>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="dashboard-insight-grid">
+            {weekCompare && <div className="chart-card insight-card"><span className="insight-icon">📈</span><div><h3>এই সপ্তাহ বনাম গত সপ্তাহ</h3><div className="insight-values"><div><small>প্রশ্ন</small><strong>{toBn(weekCompare.thisWeekQ)}</strong><em className={weekCompare.thisWeekQ >= weekCompare.lastWeekQ ? "up" : "down"}>{weekCompare.thisWeekQ >= weekCompare.lastWeekQ ? "▲" : "▼"} {toBn(weekCompare.lastWeekQ)}</em></div><div><small>নির্ভুলতা</small><strong>{toBn(weekCompare.thisAcc)}%</strong><em className={weekCompare.thisAcc >= weekCompare.lastAcc ? "up" : "down"}>{weekCompare.thisAcc >= weekCompare.lastAcc ? "▲" : "▼"} {toBn(weekCompare.lastAcc)}%</em></div></div></div></div>}
+            {typeBreakdown && (typeBreakdown.mcq.total > 0 || typeBreakdown.short.total > 0) && <div className="chart-card insight-card"><span className="insight-icon">🎯</span><div><h3>প্রশ্নের ধরন অনুযায়ী</h3><div className="insight-values"><div><small>MCQ</small><strong>{typeBreakdown.mcq.total ? toBn(Math.round((typeBreakdown.mcq.correct / typeBreakdown.mcq.total) * 100)) : toBn(0)}%</strong><em>{toBn(typeBreakdown.mcq.correct)}/{toBn(typeBreakdown.mcq.total)}</em></div><div><small>Short</small><strong>{typeBreakdown.short.total ? toBn(Math.round((typeBreakdown.short.correct / typeBreakdown.short.total) * 100)) : toBn(0)}%</strong><em>{toBn(typeBreakdown.short.correct)}/{toBn(typeBreakdown.short.total)}</em></div></div></div></div>}
           </div>
 
-          {(bestSubject || worstSubject) && (
-            <div className="chart-grid" style={{ marginBottom: 20 }}>
-              {bestSubject && (
-                <div className="highlight-card highlight-good">
-                  <span className="highlight-label">💪 সবচেয়ে ভালো বিষয়</span>
-                  <span className="highlight-name">{bestSubject.name}</span>
-                  <span className="highlight-pct">{toBn(Math.round(bestSubject.acc * 100))}% নির্ভুলতা</span>
-                </div>
-              )}
-              {worstSubject && (
-                <div className="highlight-card highlight-bad">
-                  <span className="highlight-label">📌 আরও অনুশীলন দরকার</span>
-                  <span className="highlight-name">{worstSubject.name}</span>
-                  <span className="highlight-pct">{toBn(Math.round(worstSubject.acc * 100))}% নির্ভুলতা</span>
-                </div>
-              )}
-            </div>
-          )}
+          {(bestSubject || worstSubject) && <div className="dashboard-highlight-grid">{bestSubject && <div className="highlight-card highlight-good"><span className="highlight-label">💪 সবচেয়ে ভালো</span><span className="highlight-name">{bestSubject.name}</span><span className="highlight-pct">{toBn(Math.round(bestSubject.acc * 100))}% নির্ভুলতা</span></div>}{worstSubject && <div className="highlight-card highlight-bad"><span className="highlight-label">📌 আরও অনুশীলন দরকার</span><span className="highlight-name">{worstSubject.name}</span><span className="highlight-pct">{toBn(Math.round(worstSubject.acc * 100))}% নির্ভুলতা</span></div>}</div>}
 
-          {topicProgress.length > 0 && (
-            <>
-              <h2 className="section-title">টপিকভিত্তিক প্রোগ্রেস</h2>
-              <div className="chart-card">
-                <div className="topic-progress-list">
-                  {topicProgress.map((t, i) => (
-                    <div className="topic-progress-row" key={i}>
-                      <span className="tp-name">{t.name}</span>
-                      <div className="sc-bar-track"><div className="sc-bar-fill" style={{ width: `${t.pct}%` }} /></div>
-                      <span className="tp-pct">{toBn(t.correct)}/{toBn(t.total)} · {toBn(t.pct)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+          {topicProgress.length > 0 && <><div className="dashboard-section-head compact"><div><span className="eyebrow">TOPIC PROGRESS</span><h2>টপিকভিত্তিক প্রোগ্রেস</h2></div></div><div className="chart-card"><div className="topic-progress-list">{topicProgress.map((t, i) => <div className="topic-progress-row" key={i}><span className="tp-name">{t.name}</span><div className="sc-bar-track"><div className="sc-bar-fill" style={{ width: `${t.pct}%` }} /></div><span className="tp-pct">{toBn(t.correct)}/{toBn(t.total)} · {toBn(t.pct)}%</span></div>)}</div></div></>}
 
-          {recentSessions.length > 0 && (
-            <>
-              <h2 className="section-title">সাম্প্রতিক সেশন</h2>
-              <div className="chart-card">
-                <table className="admin-table">
-                  <thead><tr><th>তারিখ</th><th>মোড</th><th>বিষয়/টপিক</th><th>স্কোর/সময়</th></tr></thead>
-                  <tbody>
-                    {recentSessions.map((s) => (
-                      <tr key={s.id}>
-                        <td>{s.date}</td>
-                        <td>{s.mode}</td>
-                        <td>{s.label}</td>
-                        <td>{s.isPractice ? `${toBn(s.minutes)} মিনিট` : `${toBn(s.correct)}/${toBn(s.total)} (${toBn(s.pct)}%)`}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          <button className="cta-primary" style={{ marginTop: 4 }} onClick={() => setView("practice")}>
-            নতুন প্র্যাকটিস শুরু করুন →
-          </button>
+          {recentSessions.length > 0 && <><div className="dashboard-section-head compact"><div><span className="eyebrow">RECENT ACTIVITY</span><h2>সাম্প্রতিক সেশন</h2></div></div><div className="chart-card recent-card"><table className="admin-table"><thead><tr><th>তারিখ</th><th>মোড</th><th>বিষয়/টপিক</th><th>স্কোর/সময়</th></tr></thead><tbody>{recentSessions.map((s) => <tr key={s.id}><td>{s.date}</td><td>{s.mode}</td><td>{s.label}</td><td>{s.isPractice ? `${toBn(s.minutes)} মিনিট` : `${toBn(s.correct)}/${toBn(s.total)} (${toBn(s.pct)}%)`}</td></tr>)}</tbody></table></div></>}
         </>
       )}
     </section>
