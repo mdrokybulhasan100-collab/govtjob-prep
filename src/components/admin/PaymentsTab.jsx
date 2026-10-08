@@ -7,7 +7,7 @@ export default function PaymentsTab({ flash }) {
   const [settings, setSettings] = useState({ bkash_number: "", nagad_number: "", instructions: "" });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [filter, setFilter] = useState("pending"); // pending | approved | rejected | all
+  const [filter, setFilter] = useState("pending"); // pending | approved | canceled | rejected | all
 
   useEffect(() => {
     load();
@@ -89,8 +89,10 @@ export default function PaymentsTab({ flash }) {
   }
 
   async function cancelApproved(sub) {
+    const name = sub.profiles?.full_name || sub.profiles?.email || "ইউজার";
+    const pkgLabel = packageByKey(sub.package)?.label || sub.package;
     const ok = window.confirm(
-      `এই অনুমোদিত সাবস্ক্রিপশনটি এখনই বাতিল করতে চান?\n\n${sub.profiles?.full_name || sub.profiles?.email || "ইউজার"} — ${packageByKey(sub.package)?.label || sub.package}`
+      `এই অনুমোদিত সাবস্ক্রিপশনটি বাতিল করতে চান?\n\n${name} — ${pkgLabel}\n\nবাতিল করলে ইউজারের premium access সঙ্গে সঙ্গে বন্ধ হবে। Payment record থাকবে, যাতে প্রয়োজনে refund করা যায়।`
     );
     if (!ok) return;
 
@@ -98,7 +100,7 @@ export default function PaymentsTab({ flash }) {
     const { error } = await supabase
       .from("subscriptions")
       .update({
-        status: "rejected",
+        status: "canceled",
         expires_at: now,
         reviewed_at: now
       })
@@ -106,7 +108,7 @@ export default function PaymentsTab({ flash }) {
       .eq("status", "approved");
 
     if (error) return flash("err", error.message);
-    flash("ok", "অনুমোদিত সাবস্ক্রিপশন বাতিল করা হয়েছে");
+    flash("ok", "সাবস্ক্রিপশন বাতিল করা হয়েছে। Payment record সংরক্ষিত আছে।");
     load();
   }
 
@@ -133,9 +135,9 @@ export default function PaymentsTab({ flash }) {
 
       <h3 style={{ marginTop: 0 }}>সাবস্ক্রিপশন সাবমিশন {pendingCount > 0 && `(${pendingCount}টি অপেক্ষমান)`}</h3>
       <div className="admin-tabs" style={{ marginBottom: 16 }}>
-        {["pending", "approved", "rejected", "all"].map((f) => (
+        {["pending", "approved", "canceled", "rejected", "all"].map((f) => (
           <button key={f} className={`admin-tab ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-            {f === "pending" ? "অপেক্ষমান" : f === "approved" ? "অনুমোদিত" : f === "rejected" ? "বাতিল" : "সব"}
+            {f === "pending" ? "অপেক্ষমান" : f === "approved" ? "অনুমোদিত" : f === "canceled" ? "বাতিলকৃত" : f === "rejected" ? "রিজেক্টেড" : "সব"}
           </button>
         ))}
       </div>
@@ -167,7 +169,8 @@ export default function PaymentsTab({ flash }) {
                 <td>
                   {s.status === "pending" && "⏳ অপেক্ষমান"}
                   {s.status === "approved" && `✅ অনুমোদিত (মেয়াদ: ${new Date(s.expires_at).toLocaleDateString("bn-BD")})`}
-                  {s.status === "rejected" && "❌ বাতিল"}
+                  {s.status === "rejected" && "❌ রিজেক্টেড"}
+                  {s.status === "canceled" && "⛔ বাতিলকৃত (Access বন্ধ)"}
                 </td>
                 <td className="admin-row-actions">
                   {s.status === "pending" && (
