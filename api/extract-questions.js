@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
   try {
     stage = 'environment';
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API;
     if (!apiKey) {
       return sendJson(res, 500, {
         ok: false,
