@@ -88,6 +88,28 @@ export default function PaymentsTab({ flash }) {
     load();
   }
 
+  async function cancelApproved(sub) {
+    const ok = window.confirm(
+      `এই অনুমোদিত সাবস্ক্রিপশনটি এখনই বাতিল করতে চান?\n\n${sub.profiles?.full_name || sub.profiles?.email || "ইউজার"} — ${packageByKey(sub.package)?.label || sub.package}`
+    );
+    if (!ok) return;
+
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({
+        status: "rejected",
+        expires_at: now,
+        reviewed_at: now
+      })
+      .eq("id", sub.id)
+      .eq("status", "approved");
+
+    if (error) return flash("err", error.message);
+    flash("ok", "অনুমোদিত সাবস্ক্রিপশন বাতিল করা হয়েছে");
+    load();
+  }
+
   const filtered = filter === "all" ? subscriptions : subscriptions.filter((s) => s.status === filter);
   const pendingCount = subscriptions.filter((s) => s.status === "pending").length;
 
@@ -153,6 +175,9 @@ export default function PaymentsTab({ flash }) {
                       <button className="cta-small" onClick={() => approve(s)}>✓ অনুমোদন</button>
                       <button className="cta-danger" onClick={() => reject(s)}>✗ বাতিল</button>
                     </>
+                  )}
+                  {s.status === "approved" && (
+                    <button className="cta-danger" onClick={() => cancelApproved(s)}>✗ সাবস্ক্রিপশন বাতিল</button>
                   )}
                 </td>
               </tr>
