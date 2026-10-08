@@ -662,3 +662,16 @@ practice_restructure_migration.sql — question_knowledge, Live Exam ফিক�
 practice_restructure_addendum.sql — 'examarchive' মোড + লিডারবোর্ড ফাংশন আপডেট (উপরেরটার পরে চালান)
 vercel.json              — SPA rewrite (যাতে সরাসরি /admin ও /editor লিংক কাজ করে)
 ```
+
+## Security hardening
+
+After the normal schema and feature migrations, run `security_hardening_migration.sql` in Supabase SQL Editor.
+
+This hardening migration:
+- prevents users from changing `role`, `is_admin`, or `editor_status` on their own profile;
+- forces user-created subscriptions to remain `pending` and prevents forged expiry/approval data;
+- enforces Live Exam subscription and exam-time windows at the database level;
+- prevents multiple Live Exam attempts for the same user/exam;
+- moves Live Exam answer submission and scoring to server-side RPC functions;
+- prevents client-side Live Exam score forgery;
+- keeps the Live Exam leaderboard anonymous (rank + score only).
