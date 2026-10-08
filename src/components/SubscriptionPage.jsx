@@ -33,6 +33,7 @@ export default function SubscriptionPage() {
 
   const activeSub = subscriptions.find((s) => s.status === "approved" && new Date(s.expires_at) > new Date());
   const pendingSub = subscriptions.find((s) => s.status === "pending");
+  const canceledSub = subscriptions.find((s) => s.status === "canceled");
 
   async function handleSubmit() {
     if (!transactionId.trim() || !contactNumber.trim()) {
@@ -41,16 +42,6 @@ export default function SubscriptionPage() {
     }
     const pkg = packageByKey(selectedPackage);
     setSubmitting(true);
-
-    // A legacy/missing profile row would violate subscriptions.user_id -> profiles.id.
-    // Repair it server-side before creating the payment submission.
-    const { error: profileError } = await supabase.rpc("ensure_my_profile");
-    if (profileError) {
-      setSubmitting(false);
-      alert("প্রোফাইল প্রস্তুত করা যায়নি: " + profileError.message);
-      return;
-    }
-
     const { error } = await supabase.from("subscriptions").insert({
       user_id: user.id,
       package: pkg.key,
@@ -84,6 +75,16 @@ export default function SubscriptionPage() {
           <p style={{ margin: "6px 0 0" }}>
             মেয়াদ শেষ হবে: {new Date(activeSub.expires_at).toLocaleDateString("bn-BD")}
             {" "}({toBn(Math.max(0, Math.ceil((new Date(activeSub.expires_at) - new Date()) / 86400000)))} দিন বাকি)
+          </p>
+        </div>
+      )}
+
+      {canceledSub && !activeSub && !pendingSub && (
+        <div className="chart-card" style={{ background: "var(--rose-soft, #fff1f2)" }}>
+          <strong>⛔ সাবস্ক্রিপশন বাতিল করা হয়েছে</strong>
+          <p style={{ margin: "6px 0 0" }}>
+            আপনার আগের {packageByKey(canceledSub.package)?.label} সাবস্ক্রিপশন অ্যাডমিন বাতিল করেছেন। Premium access বন্ধ আছে।
+            {" "}প্রয়োজনে নতুন সাবস্ক্রিপশনের জন্য আবার পেমেন্ট জমা দিতে পারেন।
           </p>
         </div>
       )}
@@ -149,7 +150,8 @@ export default function SubscriptionPage() {
                   <td>
                     {s.status === "approved" && "✅ অনুমোদিত"}
                     {s.status === "pending" && "⏳ অপেক্ষমান"}
-                    {s.status === "rejected" && "❌ বাতিল"}
+                    {s.status === "rejected" && "❌ রিজেক্টেড"}
+                    {s.status === "canceled" && "⛔ সাবস্ক্রিপশন বাতিল"}
                   </td>
                   <td>{new Date(s.created_at).toLocaleDateString("bn-BD")}</td>
                 </tr>
