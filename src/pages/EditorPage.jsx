@@ -124,6 +124,7 @@ export default function EditorPage() {
           refreshAll={loadStaticData}
           tabs={editorTabs}
           title="Editor Panel"
+          basePath="/editor"
         />
       </main>
     </div>

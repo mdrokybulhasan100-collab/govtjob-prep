@@ -92,7 +92,7 @@ export default function AdminPage() {
         </div>
       </header>
       <main className="main-area">
-        <Admin subjects={subjects} topics={topics} exams={exams} refreshAll={loadStaticData} />
+        <Admin subjects={subjects} topics={topics} exams={exams} refreshAll={loadStaticData} basePath="/admin" />
       </main>
     </div>
   );
