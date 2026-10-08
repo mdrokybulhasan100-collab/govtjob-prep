@@ -156,7 +156,7 @@ export default function MainApp() {
 
     if (liveExam.question_ids && liveExam.question_ids.length) {
       // Fixed set — generated once when the exam was created, same for everyone.
-      const { data: questionsData, error } = await supabase.from("questions").select("*").in("id", liveExam.question_ids);
+      const { data: questionsData, error } = await supabase.from("questions").select("id,question_type,question_text,option_a,option_b,option_c,option_d").in("id", liveExam.question_ids);
       if (error || !questionsData || !questionsData.length) {
         alert("এই লাইভ পরীক্ষার প্রশ্ন লোড করা যায়নি।");
         return;
@@ -165,7 +165,7 @@ export default function MainApp() {
       picked = liveExam.question_ids.map((id) => byId[id]).filter(Boolean);
     } else {
       // Fallback for older live exams created before fixed sets existed.
-      let query = supabase.from("questions").select("*");
+      let query = supabase.from("questions").select("id,question_type,question_text,option_a,option_b,option_c,option_d");
       if (liveExam.exam_id) query = query.eq("exam_id", liveExam.exam_id);
       else if (liveExam.subject_id) query = query.eq("subject_id", liveExam.subject_id);
       const { data: questionsData, error } = await query;
@@ -199,7 +199,7 @@ export default function MainApp() {
       return;
     }
 
-    setActiveQuiz({ sessionId: sessionRow.id, questions: picked, timeLimitSeconds });
+    setActiveQuiz({ sessionId: sessionRow.id, questions: picked, timeLimitSeconds, mode: "live" });
     setView("quiz");
   }
 
