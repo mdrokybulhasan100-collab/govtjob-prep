@@ -6,6 +6,7 @@ export default function PaymentsTab({ flash }) {
   const [subscriptions, setSubscriptions] = useState([]);
   const [settings, setSettings] = useState({ bkash_number: "", nagad_number: "", instructions: "" });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [filter, setFilter] = useState("pending"); // pending | approved | rejected | all
 
   useEffect(() => {
@@ -15,12 +16,52 @@ export default function PaymentsTab({ flash }) {
 
   async function load() {
     setLoading(true);
-    const [{ data: subs }, { data: s }] = await Promise.all([
-      supabase.from("subscriptions").select("*, profiles(full_name, email)").order("created_at", { ascending: false }),
-      supabase.from("payment_settings").select("*").eq("id", 1).single()
-    ]);
-    setSubscriptions(subs || []);
-    if (s) setSettings(s);
+    setLoadError("");
+
+    // Load subscriptions separately from profiles. A nested PostgREST
+    // relation can fail when profiles RLS blocks the embedded relation,
+    // which previously made the whole payment list appear empty.
+    const { data: subs, error: subsError } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (subsError) {
+      setSubscriptions([]);
+      setLoadError(`পেমেন্ট লোড করা যায়নি: ${subsError.message}`);
+    } else {
+      const rows = subs || [];
+      const userIds = [...new Set(rows.map((row) => row.user_id).filter(Boolean))];
+      let profileMap = {};
+
+      if (userIds.length) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        if (!profilesError) {
+          profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
+        }
+      }
+
+      setSubscriptions(rows.map((row) => ({
+        ...row,
+        profiles: profileMap[row.user_id] || null
+      })));
+    }
+
+    const { data: s, error: settingsError } = await supabase
+      .from("payment_settings")
+      .select("*")
+      .eq("id", 1)
+      .single();
+
+    if (!settingsError && s) setSettings(s);
+    if (settingsError && !subsError) {
+      setLoadError(`পেমেন্ট সেটিংস লোড করা যায়নি: ${settingsError.message}`);
+    }
+
     setLoading(false);
   }
 
@@ -96,10 +137,16 @@ export default function PaymentsTab({ flash }) {
         ))}
       </div>
 
+      {loadError && (
+        <div className="mode-desc" style={{ color: "#b91c1c", marginBottom: 12 }}>
+          {loadError}
+        </div>
+      )}
+
       {loading ? (
         <p className="mode-desc">লোড হচ্ছে...</p>
       ) : filtered.length === 0 ? (
-        <p className="mode-desc">কিছু পাওয়া যায়নি।</p>
+        <p className="mode-desc">{loadError ? "" : "কিছু পাওয়া যায়নি।"}</p>
       ) : (
         <table className="admin-table">
           <thead>
