@@ -44,9 +44,6 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
   const [bookImages, setBookImages] = useState([]);
   const [extractedQuestions, setExtractedQuestions] = useState([]);
   const [extracting, setExtracting] = useState(false);
-  const [bookSubjectId, setBookSubjectId] = useState("");
-  const [bookTopicId, setBookTopicId] = useState("");
-  const [bookExamId, setBookExamId] = useState("");
 
   const [questions, setQuestions] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -215,8 +212,14 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
         if (!res.ok) throw new Error(`পৃষ্ঠা ${i + 1}: ${data.error || "extract failed"}`);
         all.push(...(data.questions || []).map((q) => ({ ...q, _sourcePage: i + 1 })));
       }
-      setExtractedQuestions(all);
-      flash("ok", `${all.length}টি প্রশ্ন extract হয়েছে। Upload করার আগে দেখে নিন।`);
+      setExtractedQuestions(all.map((q) => ({
+        ...q,
+        subject_id: "",
+        topic_id: "",
+        exam_id: "",
+        question_type: q.question_type === "short" ? "short" : "mcq"
+      })));
+      flash("ok", `${all.length}টি প্রশ্ন extract হয়েছে। এখন প্রতিটি প্রশ্নের বিষয়, টপিক, প্রশ্নপত্র ও ধরন আলাদাভাবে সেট করুন।`);
     } catch (err) {
       flash("err", err.message);
     } finally {
@@ -246,9 +249,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
           skipped.push(`#${i + 1}: ৪টি অপশন ও সঠিক উত্তর দিন`); return;
         }
         rows.push({
-          subject_id: bookSubjectId || null,
-          topic_id: bookTopicId || null,
-          exam_id: bookExamId || null,
+          subject_id: q.subject_id || null,
+          topic_id: q.topic_id || null,
+          exam_id: q.exam_id || null,
           question_type: type,
           question_text: q.question_text.trim(),
           option_a: type === "mcq" ? q.option_a : null,
@@ -493,36 +496,22 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
 
       <h3>📷 বইয়ের ছবি থেকে প্রশ্ন যোগ করুন</h3>
       <p className="mode-desc">
-        বইয়ের MCQ/প্রশ্নের পরিষ্কার ছবি দিন। AI প্রশ্ন, ৪টি অপশন ও উত্তর extract করবে।
-        <strong> Upload করার আগে প্রতিটি প্রশ্ন দেখে/সংশোধন করে নিন।</strong> সর্বোচ্চ ১০টি page একসাথে নেওয়া যাবে।
+        বইয়ের পরিষ্কার page-এর ছবি দিন। AI শুধু প্রশ্ন, অপশন ও উত্তর extract করবে।
+        <strong> Extract হওয়ার পরে প্রতিটি প্রশ্ন আলাদাভাবে যাচাই করে বিষয়, টপিক, প্রশ্নপত্র ও প্রশ্নের ধরন সেট করতে পারবেন।</strong>
+        সর্বোচ্চ ১০টি page একসাথে নেওয়া যাবে।
       </p>
-      <div className="admin-form">
-        <div className="form-field"><label>বিষয় (সব extracted প্রশ্নে প্রযোজ্য)</label>
-          <select value={bookSubjectId} onChange={(e) => { setBookSubjectId(e.target.value); setBookTopicId(""); }}>
-            <option value="">কোনোটা না</option>
-            {subjects.map((s) => <option key={s.id} value={s.id}>{s.name_bn}</option>)}
-          </select>
-        </div>
-        <div className="form-field"><label>টপিক (ঐচ্ছিক)</label>
-          <select value={bookTopicId} onChange={(e) => setBookTopicId(e.target.value)}>
-            <option value="">কোনোটা না</option>
-            {topics.filter((t) => t.subject_id === bookSubjectId).map((t) => <option key={t.id} value={t.id}>{t.name_bn}</option>)}
-          </select>
-        </div>
-        <div className="form-field"><label>প্রশ্নপত্র (ঐচ্ছিক)</label>
-          <select value={bookExamId} onChange={(e) => setBookExamId(e.target.value)}>
-            <option value="">কোনোটা না</option>
-            {exams.map((ex) => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
-          </select>
-        </div>
-      </div>
       <div className="form-field">
         <label>বইয়ের পেজের ছবি</label>
         <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleBookImages} />
       </div>
       {bookImages.length > 0 && (
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "12px 0" }}>
-          {bookImages.map((img, i) => <div key={i} style={{ width: 110, fontSize: 12 }}><img src={img.previewUrl} alt={`পৃষ্ঠা ${i + 1}`} style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} /><div>পৃষ্ঠা {i + 1}</div></div>)}
+          {bookImages.map((img, i) => (
+            <div key={i} style={{ width: 110, fontSize: 12 }}>
+              <img src={img.previewUrl} alt={`পৃষ্ঠা ${i + 1}`} style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+              <div>পৃষ্ঠা {i + 1}</div>
+            </div>
+          ))}
         </div>
       )}
       <button className="cta-primary" disabled={extracting || !bookImages.length} onClick={extractFromBook}>
@@ -531,27 +520,120 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
 
       {extractedQuestions.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <h4 style={{ marginBottom: 8 }}>Extracted প্রশ্ন ({extractedQuestions.length}) — Upload-এর আগে যাচাই করুন</h4>
-          {extractedQuestions.map((q, i) => (
-            <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 14, marginBottom: 12, background: "var(--surface, #fff)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <strong>#{i + 1} · {q.question_type === "short" ? "Short" : "MCQ"} · পৃষ্ঠা {q._sourcePage}</strong>
-                <button className="cta-danger" onClick={() => removeExtracted(i)}>বাদ দিন</button>
-              </div>
-              <div className="form-field"><label>প্রশ্ন</label><textarea value={q.question_text} onChange={(e) => updateExtracted(i, "question_text", e.target.value)} /></div>
-              {q.question_type === "mcq" ? <>
-                <div className="admin-form">
-                  {['a','b','c','d'].map((o) => <div className="form-field" key={o}><label>অপশন {o.toUpperCase()}</label><input value={q[`option_${o}`] || ""} onChange={(e) => updateExtracted(i, `option_${o}`, e.target.value)} /></div>)}
-                </div>
-                <div className="admin-form">
-                  <div className="form-field" style={{ maxWidth: 160 }}><label>সঠিক উত্তর</label><select value={q.correct_option || ""} onChange={(e) => updateExtracted(i, "correct_option", e.target.value)}><option value="">নির্বাচন করুন</option><option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option></select></div>
-                  <div className="form-field"><label>ব্যাখ্যা</label><input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} /></div>
-                </div>
-              </> : <div className="form-field"><label>সঠিক উত্তর</label><input value={q.short_answer || ""} onChange={(e) => updateExtracted(i, "short_answer", e.target.value)} /></div>}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+            <div>
+              <h4 style={{ margin: 0 }}>Extracted প্রশ্ন ({extractedQuestions.length})</h4>
+              <p className="mode-desc" style={{ margin: "5px 0 0" }}>
+                প্রতিটি প্রশ্নের metadata আলাদাভাবে সেট করুন। তারপর সবগুলো একসাথে database-এ upload হবে।
+              </p>
             </div>
-          ))}
+          </div>
+
+          {extractedQuestions.map((q, i) => {
+            const questionTopics = topics.filter((t) => t.subject_id === q.subject_id);
+            const isExtractedShort = q.question_type === "short";
+            return (
+              <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 16, marginBottom: 14, background: "var(--surface, #fff)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 12 }}>
+                  <strong>#{i + 1} · পৃষ্ঠা {q._sourcePage}</strong>
+                  <button className="cta-danger" onClick={() => removeExtracted(i)}>বাদ দিন</button>
+                </div>
+
+                <div className="admin-form">
+                  <div className="form-field">
+                    <label>প্রশ্নের ধরন</label>
+                    <select
+                      value={q.question_type}
+                      onChange={(e) => {
+                        const nextType = e.target.value;
+                        setExtractedQuestions((prev) => prev.map((item, idx) => idx === i ? {
+                          ...item,
+                          question_type: nextType,
+                          ...(nextType === "short" ? { option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "" } : { short_answer: "" })
+                        } : item));
+                      }}
+                    >
+                      <option value="mcq">MCQ (৪টা অপশন)</option>
+                      <option value="short">Short Answer</option>
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label>বিষয়</label>
+                    <select
+                      value={q.subject_id || ""}
+                      onChange={(e) => setExtractedQuestions((prev) => prev.map((item, idx) => idx === i ? { ...item, subject_id: e.target.value, topic_id: "" } : item))}
+                    >
+                      <option value="">বিষয় নির্বাচন করুন</option>
+                      {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name_bn}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label>টপিক</label>
+                    <select
+                      value={q.topic_id || ""}
+                      onChange={(e) => updateExtracted(i, "topic_id", e.target.value)}
+                      disabled={!q.subject_id}
+                    >
+                      <option value="">টপিক নির্বাচন করুন</option>
+                      {questionTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name_bn}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label>প্রশ্নপত্র</label>
+                    <select value={q.exam_id || ""} onChange={(e) => updateExtracted(i, "exam_id", e.target.value)}>
+                      <option value="">প্রশ্নপত্র নির্বাচন করুন</option>
+                      {exams.map((exam) => <option key={exam.id} value={exam.id}>{exam.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>প্রশ্ন</label>
+                  <textarea value={q.question_text} onChange={(e) => updateExtracted(i, "question_text", e.target.value)} />
+                </div>
+
+                {isExtractedShort ? (
+                  <div className="admin-form">
+                    <div className="form-field">
+                      <label>সঠিক উত্তর</label>
+                      <input value={q.short_answer || ""} onChange={(e) => updateExtracted(i, "short_answer", e.target.value)} />
+                    </div>
+                    <div className="form-field">
+                      <label>ব্যাখ্যা (ঐচ্ছিক)</label>
+                      <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="admin-form">
+                      {['a','b','c','d'].map((o) => (
+                        <div className="form-field" key={o}>
+                          <label>অপশন {o.toUpperCase()}</label>
+                          <input value={q[`option_${o}`] || ""} onChange={(e) => updateExtracted(i, `option_${o}`, e.target.value)} />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="admin-form">
+                      <div className="form-field" style={{ maxWidth: 180 }}>
+                        <label>সঠিক উত্তর</label>
+                        <select value={q.correct_option || ""} onChange={(e) => updateExtracted(i, "correct_option", e.target.value)}>
+                          <option value="">নির্বাচন করুন</option>
+                          <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <label>ব্যাখ্যা (ঐচ্ছিক)</label>
+                        <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+
           <button className="cta-primary" disabled={uploading} onClick={uploadExtractedQuestions}>
-            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি Extracted প্রশ্ন Upload করুন`}
+            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি প্রশ্ন Upload করুন`}
           </button>
         </div>
       )}
