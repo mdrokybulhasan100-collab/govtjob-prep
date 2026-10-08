@@ -247,6 +247,18 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
     }
   }
 
+  function removeBookImage(index) {
+    setBookImages((prev) => {
+      const removed = prev[index];
+      if (removed?.previewUrl?.startsWith("blob:")) {
+        try { URL.revokeObjectURL(removed.previewUrl); } catch (_) {}
+      }
+      const next = prev.filter((_, i) => i !== index);
+      safeWriteStorage(QUESTION_IMAGES_KEY, next.map(({ mimeType, data, name }) => ({ mimeType, data, name })));
+      return next;
+    });
+  }
+
   async function extractFromBook() {
     if (!bookImages.length) return flash("err", "আগে বইয়ের ছবি নির্বাচন করুন");
     setExtracting(true);
@@ -565,7 +577,37 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "12px 0" }}>
           {bookImages.map((img, i) => (
             <div key={i} style={{ width: 110, fontSize: 12 }}>
-              <img src={img.previewUrl} alt={`পৃষ্ঠা ${i + 1}`} style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+              <div style={{ position: "relative", width: 100, height: 130 }}>
+                <img
+                  src={img.previewUrl}
+                  alt={`পৃষ্ঠা ${i + 1}`}
+                  style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeBookImage(i)}
+                  aria-label={`পৃষ্ঠা ${i + 1} মুছে ফেলুন`}
+                  title="এই ছবি মুছে ফেলুন"
+                  style={{
+                    position: "absolute",
+                    top: -8,
+                    right: -8,
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    border: "1px solid #fff",
+                    background: "#ef4444",
+                    color: "#fff",
+                    fontSize: 17,
+                    lineHeight: "20px",
+                    padding: 0,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(0,0,0,.2)"
+                  }}
+                >
+                  ×
+                </button>
+              </div>
               <div>পৃষ্ঠা {i + 1}</div>
             </div>
           ))}
