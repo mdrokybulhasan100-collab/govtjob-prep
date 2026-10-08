@@ -36,6 +36,31 @@ const EMPTY_QUESTION_FORM = {
   correct_option: "a", short_answer: "", explanation: ""
 };
 
+const QUESTION_DRAFT_KEY = "govtjobprep:question-import-draft:v1";
+const QUESTION_IMAGES_KEY = "govtjobprep:question-import-images:v1";
+
+function safeReadStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeWriteStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function dataUrlFromBase64(mimeType, data) {
+  return `data:${mimeType || "image/jpeg"};base64,${data}`;
+}
+
 export default function QuestionsTab({ subjects, topics, exams, flash }) {
   const [form, setForm] = useState(EMPTY_QUESTION_FORM);
   const [editingId, setEditingId] = useState(null);
@@ -57,6 +82,35 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
     loadQuestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Restore in-progress question-import work after a browser tab/page reload.
+  useEffect(() => {
+    const draft = safeReadStorage(QUESTION_DRAFT_KEY, null);
+    if (draft) {
+      if (Array.isArray(draft.extractedQuestions)) setExtractedQuestions(draft.extractedQuestions);
+      if (draft.form) setForm({ ...EMPTY_QUESTION_FORM, ...draft.form });
+      if (typeof draft.jsonText === "string") setJsonText(draft.jsonText);
+      if (typeof draft.filterSubject === "string") setFilterSubject(draft.filterSubject);
+      if (typeof draft.filterExam === "string") setFilterExam(draft.filterExam);
+      if (typeof draft.editingId === "string" || draft.editingId === null) setEditingId(draft.editingId);
+    }
+
+    const savedImages = safeReadStorage(QUESTION_IMAGES_KEY, []);
+    if (Array.isArray(savedImages) && savedImages.length) {
+      setBookImages(savedImages.map((img) => ({
+        ...img,
+        previewUrl: dataUrlFromBase64(img.mimeType, img.data)
+      })));
+    }
+  }, []);
+
+  // Persist all editable question-import state so switching tabs or an unexpected
+  // page reload does not erase extracted questions/metadata.
+  useEffect(() => {
+    safeWriteStorage(QUESTION_DRAFT_KEY, {
+      extractedQuestions, form, jsonText, filterSubject, filterExam, editingId
+    });
+  }, [extractedQuestions, form, jsonText, filterSubject, filterExam, editingId]);
 
   async function loadQuestions() {
     setLoadingList(true);
@@ -185,6 +239,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
       const prepared = [];
       for (const file of files) prepared.push(await compressImage(file));
       setBookImages(prepared);
+      safeWriteStorage(QUESTION_IMAGES_KEY, prepared.map(({ mimeType, data, name }) => ({ mimeType, data, name })));
     } catch (err) {
       flash("err", err.message);
     } finally {
@@ -269,6 +324,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
       flash("ok", `${rows.length}টি প্রশ্ন সফলভাবে যোগ হয়েছে।` + (skipped.length ? ` ${skipped.length}টি বাদ গেছে।` : ""));
       setExtractedQuestions([]);
       setBookImages([]);
+      try { localStorage.removeItem(QUESTION_DRAFT_KEY); } catch (_) {}
+      try { localStorage.removeItem(QUESTION_IMAGES_KEY); } catch (_) {}
       loadQuestions();
     } catch (err) {
       flash("err", "প্রশ্ন upload করতে সমস্যা: " + err.message);
