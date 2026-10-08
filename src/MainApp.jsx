@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
 import { shuffle } from "./lib/utils";
 import { ensureProfileExists } from "./lib/ensureProfile";
@@ -20,6 +21,21 @@ const QUESTIONS_PER_SESSION = 20;
 // "System views" are part of the core practice flow (not toggleable
 // features with a nav button) — they're reached via actions inside a
 // feature (starting a quiz, finishing a quiz), not by clicking a tab.
+const FEATURE_ROUTES = {
+  dashboard: "/",
+  practice: "/practice",
+  quizbuilder: "/quiz-builder",
+  liveexam: "/live-exam",
+  search: "/quick-search",
+  favorites: "/revision",
+  exams: "/exam-archive",
+  subscription: "/subscription"
+};
+
+const PATH_TO_FEATURE = Object.fromEntries(
+  Object.entries(FEATURE_ROUTES).map(([key, path]) => [path, key])
+);
+
 const SYSTEM_VIEWS = {
   quiz: Quiz,
   result: Result,
@@ -30,6 +46,8 @@ const SYSTEM_VIEWS = {
 };
 
 export default function MainApp() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState(null);
 
@@ -37,12 +55,29 @@ export default function MainApp() {
   const [topics, setTopics] = useState([]);
   const [exams, setExams] = useState([]);
 
-  const [view, setView] = useState("dashboard");
+  const [view, setViewState] = useState(() => PATH_TO_FEATURE[window.location.pathname] || "dashboard");
   const [activeQuiz, setActiveQuiz] = useState(null); // { sessionId, questions, timeLimitSeconds }
   const [lastResult, setLastResult] = useState(null); // { correct, total, sessionId }
   const [activePractice, setActivePractice] = useState(null); // { sessionId, questions, displayMode, timeLimitSeconds }
   const [practiceResult, setPracticeResult] = useState(null); // { reviewed, minutes }
   const [activeExamQuiz, setActiveExamQuiz] = useState(null); // { sessionId, questions, timeLimitSeconds }
+
+  // Keep the student-facing feature in sync with the real browser URL.
+  // System views (quiz/result/etc.) remain local because they are transient.
+  useEffect(() => {
+    const feature = PATH_TO_FEATURE[location.pathname];
+    if (feature) setViewState(feature);
+  }, [location.pathname]);
+
+  function setView(nextView) {
+    const route = FEATURE_ROUTES[nextView];
+    if (route) {
+      if (location.pathname !== route) navigate(route);
+      else setViewState(nextView);
+      return;
+    }
+    setViewState(nextView);
+  }
 
   useEffect(() => {
     if (!isConfigured) {

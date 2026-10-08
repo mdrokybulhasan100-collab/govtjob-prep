@@ -6,9 +6,9 @@ import EditorPage from "./pages/EditorPage";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<MainApp />} />
-      <Route path="/admin" element={<AdminPage />} />
-      <Route path="/editor" element={<EditorPage />} />
+      <Route path="/admin/*" element={<AdminPage />} />
+      <Route path="/editor/*" element={<EditorPage />} />
+      <Route path="*" element={<MainApp />} />
     </Routes>
   );
 }
