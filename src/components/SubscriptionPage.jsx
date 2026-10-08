@@ -41,6 +41,16 @@ export default function SubscriptionPage() {
     }
     const pkg = packageByKey(selectedPackage);
     setSubmitting(true);
+
+    // A legacy/missing profile row would violate subscriptions.user_id -> profiles.id.
+    // Repair it server-side before creating the payment submission.
+    const { error: profileError } = await supabase.rpc("ensure_my_profile");
+    if (profileError) {
+      setSubmitting(false);
+      alert("প্রোফাইল প্রস্তুত করা যায়নি: " + profileError.message);
+      return;
+    }
+
     const { error } = await supabase.from("subscriptions").insert({
       user_id: user.id,
       package: pkg.key,
