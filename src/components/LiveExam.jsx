@@ -63,7 +63,7 @@ export default function LiveExam() {
       <section className="view">
         <button className="cta-ghost" onClick={() => setLeaderboardFor(null)} style={{ marginBottom: 16 }}>← তালিকায় ফিরুন</button>
         <h2 className="section-title" style={{ marginTop: 0 }}>🏅 {leaderboardFor.title}</h2>
-        <p className="mode-desc">সবার নাম ও স্কোর সহ পূর্ণ র‍্যাংকিং।</p>
+        <p className="mode-desc">নাম প্রকাশ না করে স্কোরভিত্তিক র‍্যাংকিং।</p>
 
         {loadingBoard && <p className="mode-desc">লোড হচ্ছে...</p>}
         {!loadingBoard && leaderboardRows.length === 0 && (
@@ -71,13 +71,12 @@ export default function LiveExam() {
         )}
         {!loadingBoard && leaderboardRows.length > 0 && (
           <table className="leader-table">
-            <thead><tr><th>র‍্যাংক</th><th>নাম</th><th>স্কোর</th></tr></thead>
+            <thead><tr><th>র‍্যাংক</th><th>স্কোর</th></tr></thead>
             <tbody>
               {leaderboardRows.map((row) => (
                 <tr key={row.rank} className={row.is_me ? "leader-me" : ""}>
                   <td>{toBn(row.rank)}</td>
-                  <td>{row.full_name} {row.is_me && <span className="chip chip-level" style={{ padding: "3px 10px", fontSize: 11, marginLeft: 6 }}>আপনি</span>}</td>
-                  <td>{toBn(row.correct_answers)} / {toBn(row.total_questions)}</td>
+                  <td>{toBn(row.correct_answers)} / {toBn(row.total_questions)} {row.is_me && <span className="chip chip-level" style={{ padding: "3px 10px", fontSize: 11, marginLeft: 6 }}>আপনি</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -90,7 +89,7 @@ export default function LiveExam() {
   return (
     <section className="view">
       <h2 className="section-title">🔴 লাইভ পরীক্ষা</h2>
-      <p className="mode-desc">নির্ধারিত সময়ে সবাই একসাথে পরীক্ষা দিন, শেষে সবার সাথে র‍্যাংক তুলনা করুন — এই লিডারবোর্ডে নাম দেখা যায় (আপনার সাধারণ প্র্যাকটিস ডেটা এতে প্রভাবিত হয় না, সেটা আগের মতোই প্রাইভেট)।</p>
+      <p className="mode-desc">নির্ধারিত সময়ে সবাই একসাথে পরীক্ষা দিন, শেষে সবার স্কোরের সাথে আপনার র‍্যাংক তুলনা করুন — এই লিডারবোর্ডে কারও নাম বা ইমেইল দেখানো হয় না (আপনার সাধারণ প্র্যাকটিস ডেটা এতে প্রভাবিত হয় না, সেটা আগের মতোই প্রাইভেট)।</p>
 
       {loading && <p className="mode-desc">লোড হচ্ছে...</p>}
       {!loading && liveExams.length === 0 && (

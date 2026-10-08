@@ -33,7 +33,8 @@ function formatTime(totalSeconds) {
 
 export default function Quiz() {
   const { activeQuiz, handleQuizFinish } = useApp();
-  const { sessionId, questions, timeLimitSeconds = null } = activeQuiz;
+  const { sessionId, questions, timeLimitSeconds = null, mode = "practice" } = activeQuiz;
+  const isLiveExam = mode === "live";
   const onFinish = handleQuizFinish;
   const [index, setIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -80,6 +81,24 @@ export default function Quiz() {
     setAnswered(true);
     setSaving(true);
 
+    if (isLiveExam) {
+      const { error } = await supabase.rpc("submit_live_exam_answer", {
+        p_session_id: sessionId,
+        p_question_id: q.id,
+        p_selected_option: key
+      });
+      if (error) {
+        setAnswered(false);
+        setPicked(null);
+        alert("উত্তর জমা দেওয়া যায়নি: " + error.message);
+        setSaving(false);
+        return;
+      }
+      setWasCorrect(false);
+      setSaving(false);
+      return;
+    }
+
     const isCorrect = key === q.correct_option;
     setWasCorrect(isCorrect);
     if (isCorrect) setCorrectCount((c) => c + 1);
@@ -114,12 +133,14 @@ export default function Quiz() {
   async function skipQuestion() {
     if (answered) return;
     setSaving(true);
-    await supabase.from("session_answers").insert({
-      session_id: sessionId,
-      question_id: q.id,
-      selected_option: null,
-      is_correct: null
-    });
+    if (!isLiveExam) {
+      await supabase.from("session_answers").insert({
+        session_id: sessionId,
+        question_id: q.id,
+        selected_option: null,
+        is_correct: null
+      });
+    }
     setSaving(false);
     if (!isLast) {
       setIndex((i) => i + 1);
@@ -149,6 +170,18 @@ export default function Quiz() {
   }
 
   async function finishQuiz() {
+    if (isLiveExam) {
+      const { data, error } = await supabase.rpc("finalize_live_exam", { p_session_id: sessionId });
+      if (error) {
+        finishedRef.current = false;
+        alert("পরীক্ষার ফলাফল জমা দেওয়া যায়নি: " + error.message);
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      onFinish(row?.correct_answers ?? 0, row?.total_questions ?? questions.length, sessionId);
+      return;
+    }
+
     await supabase
       .from("practice_sessions")
       .update({ correct_answers: correctCountRef.current, completed_at: new Date().toISOString() })
@@ -172,6 +205,7 @@ export default function Quiz() {
       <div className="omr-sheet">
         <div className="omr-qnum">{toBn(index + 1).padStart(2, "0")}</div>
         <p className="omr-question">{q.question_text}</p>
+        {isLiveExam && <p className="mode-desc">লাইভ পরীক্ষায় উত্তর দেওয়ার পর সঠিক/ভুল দেখানো হবে না। ফলাফল পরীক্ষা শেষে প্রকাশ হবে।</p>}
 
         {!isShort && (
           <div className="omr-options">
@@ -179,8 +213,8 @@ export default function Quiz() {
               const classes = ["omr-option"];
               if (answered) {
                 classes.push("disabled");
-                if (key === q.correct_option) classes.push("correct", "correct-label");
-                if (key === picked && key !== q.correct_option) classes.push("wrong");
+                if (!isLiveExam && key === q.correct_option) classes.push("correct", "correct-label");
+                if (!isLiveExam && key === picked && key !== q.correct_option) classes.push("wrong");
                 if (key === picked) classes.push("picked");
               }
               return (
@@ -217,7 +251,7 @@ export default function Quiz() {
           </div>
         )}
 
-        {answered && q.explanation && (
+        {answered && !isLiveExam && q.explanation && (
           <div className="omr-explanation">{q.explanation}</div>
         )}
       </div>
