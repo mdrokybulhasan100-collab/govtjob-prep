@@ -104,7 +104,7 @@ export default function UserManagementTab({ flash }) {
                 <td>{u.email}</td>
                 <td>{u.contact_number || "—"}</td>
                 <td>
-                  <select value={u.role || "user"} onChange={(e) => changeRole(u.id, e.target.value)}>
+                  <select className="admin-role-select" aria-label={`${u.full_name || u.email} এর রোল`} value={u.role || "user"} onChange={(e) => changeRole(u.id, e.target.value)}>
                     <option value="user">{ROLE_LABELS.user}</option>
                     <option value="editor">{ROLE_LABELS.editor}</option>
                     <option value="admin">{ROLE_LABELS.admin}</option>
