@@ -5,7 +5,35 @@ export function toBn(num) {
 }
 
 export function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+const MCQ_OPTION_KEYS = ["a", "b", "c", "d"];
+
+// Creates a stable randomized display order for one question in one session.
+// Original option keys remain intact so answer validation and live-exam RPCs
+// continue using the database's correct_option / selected_option values.
+export function shuffleOptionOrder() {
+  let order = shuffle(MCQ_OPTION_KEYS);
+  // Avoid the unchanged A-B-C-D order.
+  if (order.every((key, index) => key === MCQ_OPTION_KEYS[index])) {
+    order = [...order];
+    [order[0], order[1]] = [order[1], order[0]];
+  }
+  return order;
+}
+
+export function prepareQuestionsForSession(questions, { shuffleQuestions = true } = {}) {
+  const orderedQuestions = shuffleQuestions ? shuffle(questions || []) : [...(questions || [])];
+  return orderedQuestions.map((question) => ({
+    ...question,
+    _optionOrder: shuffleOptionOrder()
+  }));
 }
 
 // ============================================================
