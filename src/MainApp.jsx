@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
-import { shuffle } from "./lib/utils";
+import { shuffle, prepareQuestionsForSession } from "./lib/utils";
 import { ensureProfileExists } from "./lib/ensureProfile";
 import { AppContext } from "./lib/AppContext";
 
@@ -113,7 +113,7 @@ export default function MainApp() {
       return;
     }
 
-    const picked = shuffle(questions).slice(0, QUESTIONS_PER_SESSION);
+    const picked = prepareQuestionsForSession(shuffle(questions).slice(0, QUESTIONS_PER_SESSION), { shuffleQuestions: false });
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
@@ -160,7 +160,7 @@ export default function MainApp() {
       return;
     }
 
-    setActiveExamQuiz({ sessionId: sessionRow.id, questions: questionList, timeLimitSeconds });
+    setActiveExamQuiz({ sessionId: sessionRow.id, questions: prepareQuestionsForSession(questionList), timeLimitSeconds });
     setView("examquiz");
   }
 
@@ -196,6 +196,8 @@ export default function MainApp() {
       }
       picked = shuffle(questionsData).slice(0, liveExam.question_count || 20);
     }
+
+    picked = prepareQuestionsForSession(picked);
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
@@ -238,7 +240,7 @@ export default function MainApp() {
       return;
     }
     const byId = Object.fromEntries(questionsData.map((q) => [q.id, q]));
-    const picked = liveExam.question_ids.map((id) => byId[id]).filter(Boolean);
+    const picked = prepareQuestionsForSession(liveExam.question_ids.map((id) => byId[id]).filter(Boolean));
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
@@ -305,6 +307,7 @@ export default function MainApp() {
 
     let picked = shuffle(questionsData);
     if (mode === "custom" && count) picked = picked.slice(0, count);
+    picked = prepareQuestionsForSession(picked, { shuffleQuestions: false });
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
