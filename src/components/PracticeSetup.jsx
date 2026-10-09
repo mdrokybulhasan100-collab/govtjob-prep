@@ -14,7 +14,9 @@ export default function PracticeSetup() {
   const { subjects, topics, exams, startPractice } = useApp();
   const [mainMode, setMainMode] = useState("all");
   const [displayMode, setDisplayMode] = useState("flashcard");
-  const [flashcardQuestionType, setFlashcardQuestionType] = useState("all");
+  const [flashcardQuestionType, setFlashcardQuestionType] = useState(null);
+  const [pendingPractice, setPendingPractice] = useState(null);
+  const [showFlashcardTypeModal, setShowFlashcardTypeModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [custSubjectIds, setCustSubjectIds] = useState([]);
   const [custTopicIds, setCustTopicIds] = useState([]);
@@ -24,7 +26,27 @@ export default function PracticeSetup() {
   const custTopicOptions = topics.filter((t) => custSubjectIds.includes(t.subject_id));
   function toggleCustSubject(id) { setCustSubjectIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]); }
   function toggleCustTopic(id) { setCustTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]); }
-  function go(params) { startPractice({ ...params, displayMode, flashcardQuestionType }); }
+  function go(params) {
+    if (displayMode === "flashcard") {
+      // Require an explicit question-type choice before starting Flashcard practice.
+      setPendingPractice(params);
+      setFlashcardQuestionType(null);
+      setShowFlashcardTypeModal(true);
+      return;
+    }
+    startPractice({ ...params, displayMode, flashcardQuestionType: "mcq" });
+  }
+
+  function confirmFlashcardType() {
+    if (!pendingPractice || !flashcardQuestionType) return;
+    startPractice({
+      ...pendingPractice,
+      displayMode: "flashcard",
+      flashcardQuestionType,
+    });
+    setShowFlashcardTypeModal(false);
+    setPendingPractice(null);
+  }
 
   return (
     <section className="view practice-page">
@@ -39,14 +61,7 @@ export default function PracticeSetup() {
           <button className={displayMode === "direct" ? "active" : ""} onClick={() => setDisplayMode("direct")}>📝 Direct MCQ</button>
         </div></div>
         <span className="toolbar-note">{displayMode === "flashcard" ? "উত্তর দেখার আগে নিজে মনে করার সুযোগ পাবেন।" : "অপশন শুরু থেকেই দেখা যাবে।"}</span>
-        {displayMode === "flashcard" && <div className="flashcard-type-filter">
-          <span className="field-kicker">প্রশ্নের ধরন</span>
-          <div className="segmented-control" role="group" aria-label="Flashcard প্রশ্নের ধরন">
-            <button type="button" className={flashcardQuestionType === "all" ? "active" : ""} onClick={() => setFlashcardQuestionType("all")}>সব (MCQ + Short)</button>
-            <button type="button" className={flashcardQuestionType === "mcq" ? "active" : ""} onClick={() => setFlashcardQuestionType("mcq")}>MCQ</button>
-            <button type="button" className={flashcardQuestionType === "short" ? "active" : ""} onClick={() => setFlashcardQuestionType("short")}>Short</button>
-          </div>
-        </div>}
+
       </div>
 
       <div className="section-heading-row"><div><span className="eyebrow">STEP 01</span><h2>প্র্যাকটিসের ধরন বেছে নিন</h2></div></div>
@@ -65,6 +80,50 @@ export default function PracticeSetup() {
 
         {mainMode === "customize" && <div className="custom-builder"><div className="content-intro"><h3>নিজের মতো practice সেট করুন</h3><p>একাধিক বিষয় ও topic নির্বাচন করে প্রশ্নের সংখ্যা ও সময় নির্ধারণ করুন।</p></div><div className="qb-block"><label className="field-kicker">বিষয় নির্বাচন</label><div className="choice-chip-grid">{subjects.map((s) => <button key={s.id} className={custSubjectIds.includes(s.id) ? "selected" : ""} onClick={() => toggleCustSubject(s.id)}>{s.icon} {s.name_bn}</button>)}</div></div>{custSubjectIds.length > 0 && <div className="qb-block"><label className="field-kicker">Topic (ঐচ্ছিক)</label><div className="choice-chip-grid">{custTopicOptions.map((t) => <button key={t.id} className={custTopicIds.includes(t.id) ? "selected" : ""} onClick={() => toggleCustTopic(t.id)}>{t.name_bn}</button>)}</div></div>}<div className="form-grid-2"><label className="modern-field"><span>প্রশ্ন সংখ্যা</span><input type="number" min="5" max="100" value={custCount} onChange={(e) => setCustCount(Math.max(1, Number(e.target.value) || 1))}/></label><label className="modern-field"><span>সময়সীমা (মিনিট)</span><input type="number" min="0" max="180" value={custMinutes} onChange={(e) => setCustMinutes(Math.max(0, Number(e.target.value) || 0))}/></label></div><button className="cta-primary cta-large" disabled={!custSubjectIds.length} onClick={() => go({ mode: "custom", subjectIds: custSubjectIds, topicIds: custTopicIds, count: custCount, timeLimitSeconds: custMinutes * 60 })}>Custom Practice শুরু করুন →</button></div>}
       </div>
+
+      {showFlashcardTypeModal && <div className="modal-backdrop" role="presentation" onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          setShowFlashcardTypeModal(false);
+          setPendingPractice(null);
+          setFlashcardQuestionType(null);
+        }
+      }}>
+        <div className="practice-type-modal" role="dialog" aria-modal="true" aria-labelledby="flashcard-type-title">
+          <button className="practice-modal-close" type="button" aria-label="বন্ধ করুন" onClick={() => {
+            setShowFlashcardTypeModal(false);
+            setPendingPractice(null);
+            setFlashcardQuestionType(null);
+          }}>×</button>
+          <span className="eyebrow">FLASHCARD PRACTICE</span>
+          <h2 id="flashcard-type-title">কোন ধরনের প্রশ্ন অনুশীলন করবেন?</h2>
+          <p>শুরু করার আগে একটি অপশন বেছে নিন।</p>
+          <div className="flashcard-modal-options" role="radiogroup" aria-label="প্রশ্নের ধরন">
+            {[
+              { value: "all", title: "সব প্রশ্ন", description: "MCQ ও Short দুটোই" },
+              { value: "mcq", title: "শুধু MCQ", description: "Option-সহ প্রশ্ন" },
+              { value: "short", title: "শুধু Short", description: "Option ছাড়া প্রশ্ন" },
+            ].map((option) => <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={flashcardQuestionType === option.value}
+              className={`flashcard-modal-option ${flashcardQuestionType === option.value ? "selected" : ""}`}
+              onClick={() => setFlashcardQuestionType(option.value)}
+            >
+              <span className="flashcard-option-radio">{flashcardQuestionType === option.value ? "✓" : ""}</span>
+              <span><strong>{option.title}</strong><small>{option.description}</small></span>
+            </button>)}
+          </div>
+          <div className="practice-modal-actions">
+            <button type="button" className="cta-secondary" onClick={() => {
+              setShowFlashcardTypeModal(false);
+              setPendingPractice(null);
+              setFlashcardQuestionType(null);
+            }}>বাতিল</button>
+            <button type="button" className="cta-primary" disabled={!flashcardQuestionType} onClick={confirmFlashcardType}>অনুশীলন শুরু করুন →</button>
+          </div>
+        </div>
+      </div>}
     </section>
   );
 }
