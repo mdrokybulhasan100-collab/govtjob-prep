@@ -80,18 +80,19 @@ export default function AdminPage() {
   }
 
   return (
-    <div>
-      <header className="topbar">
-        <div className="topbar-left">
-          <span className="seal-mini">⚙️</span>
-          <span className="topbar-title">Admin Panel</span>
+    <div className="admin-app-shell">
+      <header className="admin-topbar">
+        <div className="admin-topbar-brand">
+          <span className="admin-brand-mark">⚙</span>
+          <span className="admin-brand-copy"><strong>Admin Console</strong><small>সরকারি চাকরি প্রস্তুতি</small></span>
         </div>
-        <div className="topbar-right">
-          <Link to="/" className="cta-small" style={{ textDecoration: "none" }}>← মূল অ্যাপ</Link>
-          <button className="logout-btn" title="লগআউট" onClick={() => supabase.auth.signOut()}>⎋</button>
+        <div className="admin-topbar-actions">
+          <span className="admin-secure-label"><span /> Admin access</span>
+          <Link to="/" className="admin-home-link" style={{ textDecoration: "none" }}>↗ মূল অ্যাপ</Link>
+          <button className="admin-logout-btn" title="লগআউট" onClick={() => supabase.auth.signOut()}>লগআউট <span>↗</span></button>
         </div>
       </header>
-      <main className="main-area">
+      <main className="admin-main-area">
         <Admin subjects={subjects} topics={topics} exams={exams} refreshAll={loadStaticData} basePath="/admin" />
       </main>
     </div>
