@@ -264,7 +264,7 @@ export default function MainApp() {
   // PRACTICE (unified) — flashcard/direct-MCQ, no score saved,
   // only "known/unknown" self-assessment + time tracked.
   // ============================================================
-  async function startPractice({ mode, subjectId, topicId, examId, subjectIds, topicIds, count, timeLimitSeconds, displayMode }) {
+  async function startPractice({ mode, subjectId, topicId, examId, subjectIds, topicIds, count, timeLimitSeconds, displayMode, flashcardQuestionType = "all" }) {
     let questionsData = null;
     let error = null;
 
@@ -301,6 +301,21 @@ export default function MainApp() {
     if (error || !questionsData || !questionsData.length) {
       alert("এই মোডে এখনো কোনো প্রশ্ন পাওয়া যায়নি।");
       return;
+    }
+
+    // Flashcard lets the learner choose MCQ, Short, or All question types.
+    // Direct MCQ is always restricted to option-based MCQs.
+    if (displayMode === "flashcard" && flashcardQuestionType !== "all") {
+      questionsData = questionsData.filter((q) => {
+        const type = String(q.question_type || "").trim().toLowerCase();
+        return type === flashcardQuestionType;
+      });
+
+      if (!questionsData.length) {
+        const label = flashcardQuestionType === "short" ? "Short" : "MCQ";
+        alert(`এই নির্বাচনে কোনো ${label} প্রশ্ন পাওয়া যায়নি। অন্য প্রশ্নের ধরন নির্বাচন করুন।`);
+        return;
+      }
     }
 
     // Direct MCQ must contain only multiple-choice questions. Short-answer
