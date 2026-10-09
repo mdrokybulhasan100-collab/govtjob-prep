@@ -871,3 +871,58 @@ button, input { font-family: var(--font-body); }
   .dashboard-stat-grid,.dashboard-quick-grid { grid-template-columns:1fr; }
   .dashboard-stat-card { min-height:76px; }
 }
+
+
+/* Flashcard question-type selection modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(19, 24, 48, .48);
+  backdrop-filter: blur(4px);
+}
+.practice-type-modal {
+  position: relative;
+  width: min(100%, 480px);
+  padding: 28px;
+  border: 1px solid #e5e7f3;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(24, 29, 65, .22);
+}
+.practice-type-modal h2 { margin: 10px 34px 8px 0; font-size: 23px; line-height: 1.45; }
+.practice-type-modal > p { margin: 0 0 20px; color: #707895; font-size: 14px; }
+.practice-modal-close {
+  position: absolute; top: 14px; right: 16px; width: 36px; height: 36px;
+  border: 0; border-radius: 10px; background: #f3f4fa; color: #596078;
+  font-size: 25px; cursor: pointer;
+}
+.flashcard-modal-options { display: grid; gap: 10px; }
+.flashcard-modal-option {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px;
+  border: 1px solid #e2e5f0; border-radius: 14px; background: #fff;
+  text-align: left; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.flashcard-modal-option:hover { border-color: #aaa4ff; }
+.flashcard-modal-option.selected { border-color: #6255f5; background: #f4f2ff; }
+.flashcard-option-radio {
+  display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px;
+  border: 1.5px solid #b8bfd1; border-radius: 50%; color: #fff; font-size: 13px;
+}
+.flashcard-modal-option.selected .flashcard-option-radio { border-color: #6255f5; background: #6255f5; }
+.flashcard-modal-option strong, .flashcard-modal-option small { display: block; }
+.flashcard-modal-option strong { color: #20294b; font-size: 15px; }
+.flashcard-modal-option small { margin-top: 3px; color: #737b95; font-size: 12px; }
+.practice-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.practice-modal-actions button { min-height: 44px; padding: 0 17px; border-radius: 11px; cursor: pointer; }
+.practice-modal-actions .cta-primary:disabled { opacity: .45; cursor: not-allowed; }
+.cta-secondary { border: 1px solid #e1e4ef; background: #fff; color: #3a4261; }
+@media (max-width: 520px) {
+  .practice-type-modal { padding: 22px 18px; border-radius: 18px; }
+  .practice-type-modal h2 { font-size: 20px; }
+  .practice-modal-actions { flex-direction: column-reverse; }
+  .practice-modal-actions button { width: 100%; }
+}
