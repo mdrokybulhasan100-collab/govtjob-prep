@@ -14,6 +14,7 @@ export default function PracticeSetup() {
   const { subjects, topics, exams, startPractice } = useApp();
   const [mainMode, setMainMode] = useState("all");
   const [displayMode, setDisplayMode] = useState("flashcard");
+  const [flashcardQuestionType, setFlashcardQuestionType] = useState("all");
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [custSubjectIds, setCustSubjectIds] = useState([]);
   const [custTopicIds, setCustTopicIds] = useState([]);
@@ -23,7 +24,7 @@ export default function PracticeSetup() {
   const custTopicOptions = topics.filter((t) => custSubjectIds.includes(t.subject_id));
   function toggleCustSubject(id) { setCustSubjectIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]); }
   function toggleCustTopic(id) { setCustTopicIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]); }
-  function go(params) { startPractice({ ...params, displayMode }); }
+  function go(params) { startPractice({ ...params, displayMode, flashcardQuestionType }); }
 
   return (
     <section className="view practice-page">
@@ -38,6 +39,14 @@ export default function PracticeSetup() {
           <button className={displayMode === "direct" ? "active" : ""} onClick={() => setDisplayMode("direct")}>📝 Direct MCQ</button>
         </div></div>
         <span className="toolbar-note">{displayMode === "flashcard" ? "উত্তর দেখার আগে নিজে মনে করার সুযোগ পাবেন।" : "অপশন শুরু থেকেই দেখা যাবে।"}</span>
+        {displayMode === "flashcard" && <div className="flashcard-type-filter">
+          <span className="field-kicker">প্রশ্নের ধরন</span>
+          <div className="segmented-control" role="group" aria-label="Flashcard প্রশ্নের ধরন">
+            <button type="button" className={flashcardQuestionType === "all" ? "active" : ""} onClick={() => setFlashcardQuestionType("all")}>সব (MCQ + Short)</button>
+            <button type="button" className={flashcardQuestionType === "mcq" ? "active" : ""} onClick={() => setFlashcardQuestionType("mcq")}>MCQ</button>
+            <button type="button" className={flashcardQuestionType === "short" ? "active" : ""} onClick={() => setFlashcardQuestionType("short")}>Short</button>
+          </div>
+        </div>}
       </div>
 
       <div className="section-heading-row"><div><span className="eyebrow">STEP 01</span><h2>প্র্যাকটিসের ধরন বেছে নিন</h2></div></div>
