@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { toBn } from "../lib/utils";
+import { toBn, shuffleOptionOrder } from "../lib/utils";
 import { useApp } from "../lib/AppContext";
 const PAGE_SIZE = 50;
 export default function SmartSearch() {
@@ -12,4 +12,34 @@ export default function SmartSearch() {
   async function toggleFavorite(id){const isFav=favoriteIds.has(id),next=new Set(favoriteIds);if(isFav){next.delete(id);setFavoriteIds(next);await supabase.from("question_knowledge").delete().eq("user_id",user.id).eq("question_id",id);}else{next.add(id);setFavoriteIds(next);await supabase.from("question_knowledge").upsert({user_id:user.id,question_id:id,status:"unknown"});}}
   return <section className="view search-page"><div className="search-hero"><span className="search-big-icon">⌕</span><span className="eyebrow">SMART SEARCH</span><h1>যে প্রশ্নটি খুঁজছেন, লিখুন</h1><p>শব্দ, topic, subject বা প্রশ্নের অংশ লিখুন। ভুল বানান হলেও প্রাসঙ্গিক ফলাফল খুঁজে দেওয়ার চেষ্টা করবে।</p><div className="search-input-wrap"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="যেমন: সংবিধান, Grammar, রাজশাহী..." autoFocus/><kbd>Enter</kbd></div><div className="suggested-searches"><span>জনপ্রিয়:</span>{["সংবিধান","Grammar","মুক্তিযুদ্ধ","রাজধানী","সাধারণ জ্ঞান"].map(x=><button key={x} onClick={()=>setQuery(x)}>{x}</button>)}</div></div>{loading&&<div className="loading-state"><span className="spinner"/>প্রশ্ন খোঁজা হচ্ছে...</div>}{!loading&&searched&&results.length===0&&<div className="empty-state"><div>🔎</div><h3>কোনো প্রশ্ন পাওয়া যায়নি</h3><p>অন্য keyword বা একটু ছোট করে search করে দেখুন।</p></div>}{!loading&&results.length>0&&<><div className="results-toolbar"><strong>{toBn(results.length)}টি ফলাফল</strong><span>প্রাসঙ্গিক প্রশ্নগুলো দেখানো হচ্ছে</span></div><div className="search-results modern-results">{results.map(q=><SearchResultCard key={q.id} q={q} isFav={favoriteIds.has(q.id)} onToggleFavorite={()=>toggleFavorite(q.id)}/>)}</div><div className="pagination"><button className="cta-ghost" disabled={!page} onClick={()=>runSearch(page-1)}>← আগের পাতা</button><button className="cta-ghost" disabled={results.length<PAGE_SIZE} onClick={()=>runSearch(page+1)}>পরবর্তী পাতা →</button></div></>}</section>
 }
-export function SearchResultCard({q,isFav,onToggleFavorite}){return <article className="search-card modern-search-card"><div className="search-card-top"><div className="search-card-tags">{q.subject_name&&<span>{q.subject_name}</span>}{q.topic_name&&<span>{q.topic_name}</span>}{q.exam_name&&<span>{q.exam_name}</span>}</div><button className={`fav-btn ${isFav?"active":""}`} onClick={onToggleFavorite} title="রিভিশনে রাখুন">{isFav?"★":"☆"}</button></div><p className="search-card-question">{q.question_text}</p>{q.question_type==="short"?<p className="search-card-answer">✓ সঠিক উত্তর: <strong>{(q.short_answer||"").split(",")[0].trim()}</strong></p>:<div className="search-card-options">{["a","b","c","d"].map(k=><span key={k} className={`search-option ${q.correct_option===k?"correct":""}`}>{k.toUpperCase()}) {q["option_"+k]}</span>)}</div>}{q.explanation&&<div className="search-card-explanation">💡 {q.explanation}</div>}</article>}
+export function SearchResultCard({ q, isFav, onToggleFavorite }) {
+  const optionOrder = useMemo(() => shuffleOptionOrder(), [q.id]);
+  return (
+    <article className="search-card modern-search-card">
+      <div className="search-card-top">
+        <div className="search-card-tags">
+          {q.subject_name && <span>{q.subject_name}</span>}
+          {q.topic_name && <span>{q.topic_name}</span>}
+          {q.exam_name && <span>{q.exam_name}</span>}
+        </div>
+        <button className={`fav-btn ${isFav ? "active" : ""}`} onClick={onToggleFavorite} title="রিভিশনে রাখুন">
+          {isFav ? "★" : "☆"}
+        </button>
+      </div>
+      <p className="search-card-question">{q.question_text}</p>
+      {q.question_type === "short" ? (
+        <p className="search-card-answer">✓ সঠিক উত্তর: <strong>{(q.short_answer || "").split(",")[0].trim()}</strong></p>
+      ) : (
+        <div className="search-card-options">
+          {optionOrder.map((key, index) => (
+            <div key={key} className={`search-option ${q.correct_option === key ? "correct" : ""}`}>
+              <span className="search-option-label">{["A", "B", "C", "D"][index]}</span>
+              <span>{q["option_" + key]}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {q.explanation && <div className="search-card-explanation">💡 {q.explanation}</div>}
+    </article>
+  );
+}

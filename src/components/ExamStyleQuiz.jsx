@@ -104,7 +104,7 @@ export default function ExamStyleQuiz() {
         <p className="omr-question">{q.question_text}</p>
 
         <div className="omr-options">
-          {OPTION_KEYS.map((key) => {
+          {(q._optionOrder || OPTION_KEYS).map((key, displayIndex) => {
             const picked = answers[q.id] === key;
             return (
               <button
@@ -112,7 +112,7 @@ export default function ExamStyleQuiz() {
                 className={`omr-option ${picked ? "picked" : ""}`}
                 onClick={() => selectOption(key)}
               >
-                <span className="omr-bubble">{key.toUpperCase()}</span>
+                <span className="omr-bubble">{OPTION_KEYS[displayIndex].toUpperCase()}</span>
                 <span>{q["option_" + key]}</span>
               </button>
             );

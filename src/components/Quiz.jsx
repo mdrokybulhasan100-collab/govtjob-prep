@@ -209,7 +209,7 @@ export default function Quiz() {
 
         {!isShort && (
           <div className="omr-options">
-            {OPTION_KEYS.map((key) => {
+            {(q._optionOrder || OPTION_KEYS).map((key, displayIndex) => {
               const classes = ["omr-option"];
               if (answered) {
                 classes.push("disabled");
@@ -219,7 +219,7 @@ export default function Quiz() {
               }
               return (
                 <button key={key} className={classes.join(" ")} onClick={() => selectMcqAnswer(key)}>
-                  <span className="omr-bubble">{key.toUpperCase()}</span>
+                  <span className="omr-bubble">{OPTION_KEYS[displayIndex].toUpperCase()}</span>
                   <span>{q["option_" + key]}</span>
                 </button>
               );

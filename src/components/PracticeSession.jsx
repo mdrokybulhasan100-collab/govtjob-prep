@@ -106,7 +106,7 @@ export default function PracticeSession() {
           </div>
         ) : (
           <div className="omr-options">
-            {OPTION_KEYS.map((key) => {
+            {(q._optionOrder || OPTION_KEYS).map((key, displayIndex) => {
               const classes = ["omr-option"];
               if (picked) {
                 classes.push("disabled");
@@ -116,7 +116,7 @@ export default function PracticeSession() {
               }
               return (
                 <button key={key} className={classes.join(" ")} onClick={() => selectOption(key)}>
-                  <span className="omr-bubble">{key.toUpperCase()}</span>
+                  <span className="omr-bubble">{OPTION_KEYS[displayIndex].toUpperCase()}</span>
                   <span>{q["option_" + key]}</span>
                 </button>
               );
