@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase, isConfigured } from "./lib/supabaseClient";
-import { shuffle, prepareQuestionsForSession } from "./lib/utils";
+import { shuffle } from "./lib/utils";
 import { ensureProfileExists } from "./lib/ensureProfile";
 import { AppContext } from "./lib/AppContext";
 
@@ -113,7 +113,7 @@ export default function MainApp() {
       return;
     }
 
-    const picked = prepareQuestionsForSession(shuffle(questions).slice(0, QUESTIONS_PER_SESSION), { shuffleQuestions: false });
+    const picked = shuffle(questions).slice(0, QUESTIONS_PER_SESSION);
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
@@ -160,7 +160,7 @@ export default function MainApp() {
       return;
     }
 
-    setActiveExamQuiz({ sessionId: sessionRow.id, questions: prepareQuestionsForSession(questionList), timeLimitSeconds });
+    setActiveExamQuiz({ sessionId: sessionRow.id, questions: questionList, timeLimitSeconds });
     setView("examquiz");
   }
 
@@ -196,8 +196,6 @@ export default function MainApp() {
       }
       picked = shuffle(questionsData).slice(0, liveExam.question_count || 20);
     }
-
-    picked = prepareQuestionsForSession(picked);
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
@@ -240,7 +238,7 @@ export default function MainApp() {
       return;
     }
     const byId = Object.fromEntries(questionsData.map((q) => [q.id, q]));
-    const picked = prepareQuestionsForSession(liveExam.question_ids.map((id) => byId[id]).filter(Boolean));
+    const picked = liveExam.question_ids.map((id) => byId[id]).filter(Boolean);
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
@@ -305,9 +303,25 @@ export default function MainApp() {
       return;
     }
 
+    // Direct MCQ must contain only multiple-choice questions. Short-answer
+    // questions remain available in Flashcard mode, but must never appear
+    // in Direct MCQ even when the selected source includes mixed question types.
+    if (displayMode === "direct") {
+      questionsData = questionsData.filter((q) => {
+        const type = String(q.question_type || "").trim().toLowerCase();
+        const hasEnoughOptions = [q.option_a, q.option_b, q.option_c, q.option_d]
+          .filter((option) => String(option ?? "").trim().length > 0).length >= 2;
+        return type === "mcq" && hasEnoughOptions;
+      });
+
+      if (!questionsData.length) {
+        alert("এই নির্বাচনে কোনো MCQ প্রশ্ন পাওয়া যায়নি। Direct MCQ-এর জন্য option-সহ MCQ প্রশ্ন নির্বাচন করুন, অথবা Flashcard ব্যবহার করুন।");
+        return;
+      }
+    }
+
     let picked = shuffle(questionsData);
     if (mode === "custom" && count) picked = picked.slice(0, count);
-    picked = prepareQuestionsForSession(picked, { shuffleQuestions: false });
 
     const { data: sessionRow, error: sessionErr } = await supabase
       .from("practice_sessions")
