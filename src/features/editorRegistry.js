@@ -17,7 +17,8 @@ export const editorTabs = [
   { key: "subjects", label: "বিষয়", component: SubjectsTab },
   { key: "topics", label: "টপিক", component: TopicsTab },
   { key: "exams", label: "প্রশ্নপত্র", component: ExamsTab },
-  { key: "questions", label: "প্রশ্ন", component: QuestionsTab }
+  { key: "questions-add", label: "✚ প্রশ্ন যোগ", component: (props) => <QuestionsTab {...props} mode="add" /> },
+  { key: "questions-view", label: "☷ প্রশ্ন দেখুন", component: (props) => <QuestionsTab {...props} mode="view" /> }
 ];
 
 export default editorTabs;

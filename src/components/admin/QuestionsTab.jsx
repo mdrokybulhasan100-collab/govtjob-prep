@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { banglaToLatin } from "../../lib/utils";
 
@@ -61,7 +62,9 @@ function dataUrlFromBase64(mimeType, data) {
   return `data:${mimeType || "image/jpeg"};base64,${data}`;
 }
 
-export default function QuestionsTab({ subjects, topics, exams, flash }) {
+export default function QuestionsTab({ subjects, topics, exams, flash, mode = "add" }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState(EMPTY_QUESTION_FORM);
   const [editingId, setEditingId] = useState(null);
   const [jsonText, setJsonText] = useState(SAMPLE_JSON);
@@ -153,6 +156,10 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
       short_answer: q.short_answer || "",
       explanation: q.explanation || ""
     });
+    if (mode === "view") {
+      const prefix = location.pathname.startsWith("/editor") ? "/editor" : "/admin";
+      navigate(`${prefix}/questions-add`);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -417,6 +424,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
 
   return (
     <div>
+      {mode !== "view" && (
+        <>
       <h3 style={{ marginTop: 0 }}>{editingId ? "প্রশ্ন এডিট করুন" : "একটা প্রশ্ন যোগ করুন"}</h3>
       {editingId && (
         <div className="admin-msg" style={{ background: "var(--indigo-soft)", color: "var(--indigo-deep)" }}>
@@ -504,6 +513,11 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
 
       <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
 
+        </>
+      )}
+
+      {mode !== "add" && (
+        <>
       <h3 style={{ marginTop: 0 }}>যোগ করা প্রশ্নসমূহ ({filteredQuestions.length})</h3>
       <div className="admin-form">
         <div className="form-field"><label>বিষয় দিয়ে ফিল্টার</label>
@@ -563,6 +577,11 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
 
       <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
 
+        </>
+      )}
+
+      {mode !== "view" && (
+        <>
       <h3>📷 বইয়ের ছবি থেকে প্রশ্ন যোগ করুন</h3>
       <p className="mode-desc">
         বইয়ের পরিষ্কার page-এর ছবি দিন। AI শুধু প্রশ্ন, অপশন ও উত্তর extract করবে।
@@ -755,6 +774,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash }) {
       <button className="cta-primary" disabled={uploading} onClick={bulkUpload} style={{ marginTop: 10 }}>
         {uploading ? "আপলোড হচ্ছে..." : "JSON আপলোড করুন"}
       </button>
+        </>
+      )}
     </div>
   );
 }
