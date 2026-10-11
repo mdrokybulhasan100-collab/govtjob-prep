@@ -48,20 +48,27 @@ export default function Admin({ subjects, topics, exams, refreshAll, user, tabs,
 
       <div className="admin-workspace-grid">
         <aside className="admin-sidebar" aria-label="Admin navigation">
+          <div className="admin-sidebar-brand">
+            <span className="admin-sidebar-brand-mark">G</span>
+            <div><strong>GovtJob Prep</strong><small>ADMIN WORKSPACE</small></div>
+          </div>
           <div className="admin-sidebar-label">WORKSPACE</div>
-          {activeTabs.map((t, index) => (
+          {activeTabs.map((t) => (
             <button
               key={t.key}
               className={`admin-tab ${tab === t.key ? "active" : ""}`}
               onClick={() => navigate(tabRoutes[t.key])}
               aria-current={tab === t.key ? "page" : undefined}
             >
-              <span className="admin-tab-index">{String(index + 1).padStart(2, "0")}</span>
               <span className="admin-tab-label">{t.label}</span>
               <span className="admin-tab-arrow">›</span>
             </button>
           ))}
-          <div className="admin-sidebar-note"><span>✦</span><div><strong>Admin workspace</strong><small>পরিবর্তনগুলো সেভ করার আগে যাচাই করুন।</small></div></div>
+          <div className="admin-sidebar-note"><span>✦</span><div><strong>Admin workspace</strong><small>কনটেন্ট ও শিক্ষার্থী পরিচালনা করুন।</small></div></div>
+          {user && <div className="admin-sidebar-user">
+            <span className="admin-sidebar-user-avatar">{(user.user_metadata?.full_name || user.email || "A").trim().charAt(0).toUpperCase()}</span>
+            <span className="admin-sidebar-user-copy"><strong>{user.user_metadata?.full_name || "Admin account"}</strong><small>{user.email || "Signed in"}</small></span>
+          </div>}
         </aside>
 
         <div className="admin-content-column">
