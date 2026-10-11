@@ -18,6 +18,30 @@ export default function AudioPractice() {
   const settingsRef = useRef({ delay: 10, optionPause: true, rate: 1 });
   const topicChoices = useMemo(() => topics.filter(t => !subjectId || t.subject_id === subjectId), [topics, subjectId]);
 
+  useEffect(() => {
+    if (!window.NativeAudio) return;
+    window.onNativeAudioEvent = event => {
+      if (!event) return;
+      if (event.type === "started" || event.type === "playing" || event.type === "segment") {
+        const qIndex = Math.max(0, Number(event.question || 1) - 1);
+        if (qIndex < questionsRef.current.length) { indexRef.current = qIndex; setIndex(qIndex); }
+        setStatus("playing");
+        if (event.type === "segment") setMessage(`প্রশ্ন ${toBn(Math.max(1, qIndex + 1))} / ${toBn(questionsRef.current.length)} শোনানো হচ্ছে…`);
+      } else if (event.type === "paused") {
+        setStatus("paused"); setMessage("অডিও বিরতিতে আছে। Resume চাপলে আবার চলবে।");
+      } else if (event.type === "finished") {
+        setStatus("finished"); setMessage("অডিও প্র্যাকটিস শেষ! দারুণ করেছেন।");
+      } else if (event.type === "stopped") {
+        setStatus("idle"); setMessage("অডিও বন্ধ করা হয়েছে।");
+      } else if (event.type === "voice-warning") {
+        setError(event.message || "ফোনে বাংলা TTS voice নেই।");
+      } else if (event.type === "error") {
+        setError(event.message || "Native audio চালাতে সমস্যা হয়েছে।"); setStatus("idle");
+      }
+    };
+    return () => { if (window.onNativeAudioEvent) window.onNativeAudioEvent = null; };
+  }, []);
+
   const stopEngine = useCallback(() => {
     runRef.current += 1;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -78,6 +102,36 @@ export default function AudioPractice() {
     }
   }, [speak]);
 
+  function makeNativeSegments(pool, pauseSeconds, pauseAfterOptions) {
+    const segments = [];
+    pool.forEach((q, i) => {
+      const questionNo = i + 1;
+      const short = isShort(q);
+      const options = !short ? (q.__audioOptions = shuffle(getOptions(q))) : [];
+      segments.push({ text: `প্রশ্ন ${questionNo}। ${q.question_text || ""}`, question: questionNo, kind: "question", pauseAfter: pauseSeconds });
+      if (!short) {
+        options.forEach((o, oi) => {
+          segments.push({
+            text: `অপশন ${LETTERS[oi]}। ${o.text}`,
+            question: questionNo,
+            kind: "option",
+            pauseAfter: pauseAfterOptions && oi === options.length - 1 ? pauseSeconds : 0
+          });
+        });
+      }
+      let answer;
+      if (short) answer = q.short_answer || q.explanation || "এই প্রশ্নের উত্তর সংরক্ষিত নেই।";
+      else {
+        const correctKey = String(q.correct_option || "").toLowerCase();
+        const pos = options.findIndex(o => o.key === correctKey);
+        const correctText = q[`option_${correctKey}`] || "উত্তর সংরক্ষিত নেই।";
+        answer = pos >= 0 ? `সঠিক উত্তর অপশন ${LETTERS[pos]}। ${correctText}` : `সঠিক উত্তর ${correctText}`;
+      }
+      segments.push({ text: answer, question: questionNo, kind: "answer", pauseAfter: 0 });
+    });
+    return segments;
+  }
+
   async function start() {
     setError(""); setLoading(true); stopEngine();
     try {
@@ -94,25 +148,37 @@ export default function AudioPractice() {
       pool = shuffle(pool).slice(0, Math.max(1, Math.min(100, Number(count) || 20))).map(q => ({ ...q }));
       questionsRef.current = pool; indexRef.current = 0; settingsRef.current = { delay: Number(delay) || 10, optionPause, rate: Number(rate) || 1 };
       setQuestions(pool); setIndex(0); setStatus("playing"); setMessage("অডিও প্রস্তুত হচ্ছে…");
-      const run = runRef.current; timerRef.current = setTimeout(() => go("question", run), 200);
+      if (window.NativeAudio && typeof window.NativeAudio.startSession === "function") {
+        const segments = makeNativeSegments(pool, Number(delay) || 10, optionPause);
+        window.NativeAudio.startSession(JSON.stringify({ segments, rate: Number(rate) || 1 }));
+      } else {
+        const run = runRef.current; timerRef.current = setTimeout(() => go("question", run), 200);
+      }
     } catch (e) { setError(`প্রশ্ন লোড করা যায়নি: ${e.message || "অজানা সমস্যা"}`); }
     finally { setLoading(false); }
   }
   function pause() {
     if (status !== "playing") return;
+    if (window.NativeAudio) { window.NativeAudio.pauseAudio(); return; }
     pausedRef.current = true; if (timerRef.current) clearTimeout(timerRef.current); timerRef.current = null;
     if (window.speechSynthesis?.speaking) window.speechSynthesis.pause();
     setStatus("paused"); setMessage("অডিও বিরতিতে আছে। Resume চাপলে আবার চলবে।");
   }
   function resume() {
     if (status !== "paused") return;
+    if (window.NativeAudio) { window.NativeAudio.resumeAudio(); return; }
     pausedRef.current = false;
     if (window.speechSynthesis?.paused && utteranceRef.current) { window.speechSynthesis.resume(); setStatus("playing"); setMessage("অডিও চলছে…"); }
     else { setStatus("playing"); go(stageRef.current, runRef.current); }
   }
-  function stop() { stopEngine(); setStatus("idle"); setMessage("অডিও বন্ধ করা হয়েছে। আবার শুরু করতে পারেন।"); setIndex(0); indexRef.current = 0; }
+  function stop() {
+    if (window.NativeAudio) window.NativeAudio.stopAudio();
+    stopEngine(); setStatus("idle"); setMessage("অডিও বন্ধ করা হয়েছে। আবার শুরু করতে পারেন।"); setIndex(0); indexRef.current = 0;
+  }
   function skip() {
-    if (!questionsRef.current.length) return; stopEngine();
+    if (!questionsRef.current.length) return;
+    if (window.NativeAudio) { window.NativeAudio.skipQuestion(); return; }
+    stopEngine();
     if (indexRef.current + 1 >= questionsRef.current.length) { setStatus("finished"); setMessage("অডিও প্র্যাকটিস শেষ! দারুণ করেছেন।"); return; }
     indexRef.current += 1; setIndex(indexRef.current); setStatus("playing"); const run = runRef.current;
     timerRef.current = setTimeout(() => go("question", run), 150);
@@ -139,6 +205,6 @@ export default function AudioPractice() {
       {questions.length > 0 && <><div className="audio-progress-meta"><span>প্রশ্ন {toBn(Math.min(index + 1, questions.length))} / {toBn(questions.length)}</span><span>{toBn(progress)}%</span></div><div className="audio-progress-track"><div style={{ width: `${progress}%` }} /></div></>}
       {current && status !== "idle" && <div className="audio-current-question"><span className="field-kicker">বর্তমান প্রশ্ন (ঐচ্ছিক)</span><p>{current.question_text}</p></div>}{status === "finished" && <p className="audio-finished-note">সব প্রশ্ন শেষ হয়েছে। নতুন সেট দিয়ে আবার অনুশীলন করতে পারেন।</p>}
       <div className="audio-player-bottom"><span>{locked ? "হেডফোন ব্যবহার করুন এবং মনে মনে উত্তর দিন।" : "প্রশ্নের ক্রম প্রতিবার এলোমেলো হবে।"}</span>{locked && <button className="cta-secondary" onClick={skip}>পরের প্রশ্ন →</button>}</div>
-    </div><p className="audio-browser-note">নোট: অডিও আপনার ব্রাউজারের Text-to-Speech কণ্ঠ ব্যবহার করে। বাংলা কণ্ঠের প্রাপ্যতা ডিভাইসভেদে আলাদা হতে পারে। অন্য অ্যাপে গেলে বা স্ক্রিন লক করলে অডিও চালু থাকা সব ডিভাইসে নিশ্চিত নয়।</p>
+    </div><p className="audio-browser-note">নোট: Android অ্যাপের মধ্যে ব্যবহার করলে ফোনের Native Text-to-Speech দিয়ে স্ক্রিন লক অবস্থাতেও অডিও চালানোর চেষ্টা করা হবে। বাংলা voice না থাকলে ফোনের Text-to-Speech settings থেকে ইনস্টল করুন। ওয়েব ব্রাউজারে সরাসরি খুললে ব্রাউজারের TTS ব্যবহার হবে।</p>
   </section>;
 }
