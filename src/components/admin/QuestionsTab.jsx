@@ -134,6 +134,25 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
     loadQuestions();
   }
 
+  async function toggleQuestionFlag(question, field, value) {
+    const labels = {
+      is_published: value ? "প্রশ্নটি প্রকাশ করা হয়েছে" : "প্রশ্নটি Unpublish করা হয়েছে",
+      audio_suitable: value ? "Audio Practice-এর জন্য নির্বাচন করা হয়েছে" : "Audio Practice থেকে বাদ দেওয়া হয়েছে"
+    };
+    const { error } = await supabase
+      .from("questions")
+      .update({ [field]: value })
+      .eq("id", question.id);
+    if (error) {
+      flash("err", error.message);
+      return;
+    }
+    setQuestions(current => current.map(item =>
+      item.id === question.id ? { ...item, [field]: value } : item
+    ));
+    flash("ok", labels[field] || "আপডেট হয়েছে");
+  }
+
   const filteredQuestions = questions.filter((q) => {
     if (filterSubject && q.subject_id !== filterSubject) return false;
     if (filterExam && q.exam_id !== filterExam) return false;
@@ -547,7 +566,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
               <th>বিষয় / টপিক</th>
               <th>প্রশ্নপত্র</th>
               <th>সঠিক উত্তর</th>
-              <th></th>
+              <th>প্রকাশ</th>
+              <th>Audio Practice</th>
+              <th>অ্যাকশন</th>
             </tr>
           </thead>
           <tbody>
@@ -564,6 +585,24 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                   {q.question_type === "short"
                     ? q.short_answer
                     : `${q.correct_option?.toUpperCase()}) ${q["option_" + q.correct_option] || ""}`}
+                </td>
+                <td>
+                  <button
+                    className={q.is_published ? "cta-small" : "cta-danger"}
+                    onClick={() => toggleQuestionFlag(q, "is_published", !q.is_published)}
+                    title={q.is_published ? "ব্যবহারকারীদের কাছ থেকে লুকাতে Unpublish করুন" : "প্রশ্নটি ব্যবহারকারীদের দেখাতে Publish করুন"}
+                  >
+                    {q.is_published ? "Unpublish" : "Publish"}
+                  </button>
+                </td>
+                <td>
+                  <button
+                    className={q.audio_suitable ? "cta-small" : "cta-danger"}
+                    onClick={() => toggleQuestionFlag(q, "audio_suitable", !q.audio_suitable)}
+                    title={q.audio_suitable ? "Audio Practice থেকে বাদ দিন" : "Audio Practice-এ শোনানোর জন্য নির্বাচন করুন"}
+                  >
+                    {q.audio_suitable ? "Audio: হ্যাঁ" : "Audio: না"}
+                  </button>
                 </td>
                 <td className="admin-row-actions">
                   <button className="cta-small" onClick={() => startEdit(q)}>এডিট</button>

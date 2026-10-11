@@ -135,7 +135,11 @@ export default function AudioPractice() {
   async function start() {
     setError(""); setLoading(true); stopEngine();
     try {
-      let query = supabase.from("questions").select("*");
+      let query = supabase
+        .from("questions")
+        .select("*")
+        .eq("is_published", true)
+        .eq("audio_suitable", true);
       if (subjectId) query = query.eq("subject_id", subjectId);
       if (topicId) query = query.eq("topic_id", topicId);
       const { data, error: fetchError } = await query;
