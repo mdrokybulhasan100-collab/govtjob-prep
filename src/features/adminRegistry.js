@@ -16,6 +16,7 @@ import AnnouncementsTab from "../components/admin/AnnouncementsTab";
 import DailyFactsTab from "../components/admin/DailyFactsTab";
 import UserManagementTab from "../components/admin/UserManagementTab";
 import PaymentsTab from "../components/admin/PaymentsTab";
+import ProfileSettingsTab from "../components/admin/ProfileSettingsTab";
 
 const adminTabs = [
   ...editorTabs,
@@ -23,7 +24,8 @@ const adminTabs = [
   { key: "payments", label: "💳 পেমেন্ট", component: PaymentsTab },
   { key: "announcements", label: "📢 বিজ্ঞপ্তি", component: AnnouncementsTab },
   { key: "dailyfacts", label: "💡 দৈনিক ফ্যাক্ট", component: DailyFactsTab },
-  { key: "users", label: "👤 ইউজার ম্যানেজমেন্ট", component: UserManagementTab }
+  { key: "users", label: "👤 ইউজার ম্যানেজমেন্ট", component: UserManagementTab },
+  { key: "profile", label: "⚙️ প্রোফাইল সেটিংস", component: ProfileSettingsTab }
 ];
 
 export default adminTabs;

@@ -1125,3 +1125,26 @@ button, input { font-family: var(--font-body); }
   .topbar-right { gap: 4px; }
   .topbar-right .logout-btn { padding: 4px 7px; }
 }
+
+
+/* Admin profile settings */
+.admin-profile-settings { display: flex; flex-direction: column; gap: 24px; }
+.admin-profile-intro { display: flex; align-items: center; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--border, #e5e7eb); }
+.admin-profile-avatar { width: 58px; height: 58px; flex: 0 0 58px; border-radius: 18px; display: grid; place-items: center; background: #5145e5; color: #fff; font-size: 24px; font-weight: 800; }
+.admin-profile-intro h3 { margin: 0 0 5px; font-size: 20px; }
+.admin-profile-intro p, .admin-profile-security p { margin: 0; color: #77809a; font-size: 13px; line-height: 1.6; }
+.admin-profile-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.admin-profile-form label { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.admin-profile-form label > span { font-size: 13px; font-weight: 700; color: #47516b; }
+.admin-profile-form input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px; border: 1px solid #dfe4f0; border-radius: 11px; background: #f8f9fc; color: #17213e; font: inherit; }
+.admin-profile-form input:focus { outline: 2px solid #c9c5ff; border-color: #7167f5; }
+.admin-profile-form input:disabled { color: #667085; opacity: 1; cursor: not-allowed; }
+.admin-profile-form small { font-size: 11px; color: #8790a5; }
+.admin-profile-actions { grid-column: 1 / -1; }
+.admin-profile-save, .admin-profile-reset { min-height: 42px; border: 0; border-radius: 11px; padding: 0 18px; font: inherit; font-weight: 700; cursor: pointer; }
+.admin-profile-save { background: #5145e5; color: white; }
+.admin-profile-reset { background: #f0efff; color: #4338ca; white-space: nowrap; }
+.admin-profile-save:disabled, .admin-profile-reset:disabled { opacity: .6; cursor: wait; }
+.admin-profile-security { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid #e5e8f2; background: #fafbff; border-radius: 14px; }
+.admin-profile-security h4 { margin: 0 0 6px; font-size: 15px; }
+@media (max-width: 640px) { .admin-profile-form { grid-template-columns: 1fr; } .admin-profile-security { align-items: stretch; flex-direction: column; } .admin-profile-reset { white-space: normal; } }

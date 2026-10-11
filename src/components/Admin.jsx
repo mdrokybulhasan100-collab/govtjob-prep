@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import defaultAdminTabs from "../features/adminRegistry";
 
-export default function Admin({ subjects, topics, exams, refreshAll, tabs, title, basePath = "/admin" }) {
+export default function Admin({ subjects, topics, exams, refreshAll, user, tabs, title, basePath = "/admin" }) {
   const activeTabs = tabs || defaultAdminTabs;
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,7 +72,7 @@ export default function Admin({ subjects, topics, exams, refreshAll, tabs, title
           {msg && <div className={`admin-msg ${msg.type}`}>{msg.text}</div>}
           <div className="admin-panel">
             {ActiveTab && (
-              <ActiveTab subjects={subjects} topics={topics} exams={exams} refreshAll={refreshAll} flash={flash} />
+              <ActiveTab subjects={subjects} topics={topics} exams={exams} refreshAll={refreshAll} flash={flash} user={user} />
             )}
           </div>
         </div>
