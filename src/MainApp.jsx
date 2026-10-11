@@ -42,7 +42,7 @@ export default function MainApp() {
   const navigate = useNavigate();
   const PATH_TO_VIEW = {
     "/": "dashboard", "/dashboard": "dashboard", "/practice": "practice",
-    "/quiz-builder": "quizbuilder", "/live-exam": "liveexam", "/quick-search": "search",
+    "/quiz-builder": "quizbuilder", "/audio-practice": "audiopractice", "/live-exam": "liveexam", "/quick-search": "search",
     "/revision": "favorites", "/exam-archive": "exams", "/subscription": "subscription"
   };
   const VIEW_TO_PATH = Object.fromEntries(Object.entries(PATH_TO_VIEW).map(([path, key]) => [key, path]));
