@@ -24,10 +24,12 @@ import SmartSearch from "../components/SmartSearch";
 import Favorites from "../components/Favorites";
 import ExamsList from "../components/ExamsList";
 import SubscriptionPage from "../components/SubscriptionPage";
+import AudioPractice from "../components/AudioPractice";
 
 const features = [
   { key: "dashboard", label: "ড্যাশবোর্ড", component: Dashboard },
   { key: "practice", label: "প্র্যাকটিস", component: PracticeSetup },
+  { key: "audiopractice", label: "🎧 অডিও প্র্যাকটিস", component: AudioPractice },
   { key: "quizbuilder", label: "🎛️ কুইজ বিল্ডার", component: QuizBuilder },
   { key: "liveexam", label: "🔴 লাইভ পরীক্ষা", component: LiveExam },
   { key: "search", label: "🔍 কুইক সার্চ", component: SmartSearch },
