@@ -17,8 +17,10 @@ import DailyFactsTab from "../components/admin/DailyFactsTab";
 import UserManagementTab from "../components/admin/UserManagementTab";
 import PaymentsTab from "../components/admin/PaymentsTab";
 import ProfileSettingsTab from "../components/admin/ProfileSettingsTab";
+import DashboardTab from "../components/admin/DashboardTab";
 
 const adminTabs = [
+  { key: "dashboard", label: "▦ ড্যাশবোর্ড", component: DashboardTab },
   ...editorTabs,
   { key: "liveexams", label: "🔴 লাইভ পরীক্ষা", component: LiveExamsTab },
   { key: "payments", label: "💳 পেমেন্ট", component: PaymentsTab },
