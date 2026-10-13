@@ -50,6 +50,10 @@ export default function AdminPage() {
     }
 
     let cancelled = false;
+    // A new authenticated user can arrive while checkingRole is still false
+    // (for example, after the initial auth listener fires). Keep the loading
+    // state active until this user's role has actually been verified.
+    setCheckingRole(true);
     async function initializeAdmin() {
       const [{ data: profile }, { data: s }, { data: t }, { data: e }] = await Promise.all([
         supabase.from("profiles").select("role").eq("id", userId).single(),
@@ -64,7 +68,12 @@ export default function AdminPage() {
       setExams(e || []);
       setCheckingRole(false);
     }
-    initializeAdmin();
+    initializeAdmin().catch((error) => {
+      if (cancelled) return;
+      console.error("Failed to initialize admin panel:", error);
+      setIsAdmin(false);
+      setCheckingRole(false);
+    });
     return () => { cancelled = true; };
   }, [userId]);
 
