@@ -33,20 +33,40 @@ export default function AdminPage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      checkAdmin();
-      loadStaticData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  // Use the stable user ID rather than the full Supabase user object.
+  // Supabase can emit TOKEN_REFRESHED / USER_UPDATED events with a new user
+  // object even though the signed-in account has not changed. Depending on
+  // [user] made the whole Admin page briefly return null during every refresh.
+  const userId = user?.id || null;
 
-  async function checkAdmin() {
-    setCheckingRole(true);
-    const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-    setIsAdmin(data?.role === "admin");
-    setCheckingRole(false);
-  }
+  useEffect(() => {
+    if (!userId) {
+      setCheckingRole(false);
+      setIsAdmin(false);
+      setSubjects([]);
+      setTopics([]);
+      setExams([]);
+      return;
+    }
+
+    let cancelled = false;
+    async function initializeAdmin() {
+      const [{ data: profile }, { data: s }, { data: t }, { data: e }] = await Promise.all([
+        supabase.from("profiles").select("role").eq("id", userId).single(),
+        supabase.from("subjects").select("*").order("sort_order"),
+        supabase.from("topics").select("*").order("sort_order"),
+        supabase.from("exams").select("*").order("year", { ascending: false })
+      ]);
+      if (cancelled) return;
+      setIsAdmin(profile?.role === "admin");
+      setSubjects(s || []);
+      setTopics(t || []);
+      setExams(e || []);
+      setCheckingRole(false);
+    }
+    initializeAdmin();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   async function loadStaticData() {
     const [{ data: s }, { data: t }, { data: e }] = await Promise.all([
