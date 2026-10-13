@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { banglaToLatin } from "../../lib/utils";
@@ -77,7 +77,6 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   const [loadingList, setLoadingList] = useState(true);
   const [filterSubject, setFilterSubject] = useState("");
   const [filterExam, setFilterExam] = useState("");
-  const skipInitialDraftSave = useRef(true);
 
   const topicsForSubject = topics.filter((t) => t.subject_id === form.subject_id);
   const isShort = form.question_type === "short";
@@ -111,12 +110,6 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   // Persist all editable question-import state so switching tabs or an unexpected
   // page reload does not erase extracted questions/metadata.
   useEffect(() => {
-    // The first render may still contain defaults while the saved draft is being
-    // restored. Do not overwrite that draft until restoration has taken effect.
-    if (skipInitialDraftSave.current) {
-      skipInitialDraftSave.current = false;
-      return;
-    }
     safeWriteStorage(QUESTION_DRAFT_KEY, {
       extractedQuestions, form, jsonText, filterSubject, filterExam, editingId
     });
@@ -167,12 +160,13 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   });
 
   function startEdit(q) {
-    const nextForm = {
+    setEditingId(q.id);
+    setForm({
       subject_id: q.subject_id || "",
       topic_id: q.topic_id || "",
       exam_id: q.exam_id || "",
-      question_type: q.question_type || "mcq",
-      question_text: q.question_text || "",
+      question_type: q.question_type,
+      question_text: q.question_text,
       option_a: q.option_a || "",
       option_b: q.option_b || "",
       option_c: q.option_c || "",
@@ -180,20 +174,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       correct_option: q.correct_option || "a",
       short_answer: q.short_answer || "",
       explanation: q.explanation || ""
-    };
-    setEditingId(q.id);
-    setForm(nextForm);
-
-    // Save synchronously before navigation because changing admin tabs unmounts
-    // this component; React effects may not run before it unmounts.
-    safeWriteStorage(QUESTION_DRAFT_KEY, {
-      extractedQuestions, form: nextForm, jsonText, filterSubject, filterExam, editingId: q.id
     });
-
-    if (mode === "view") {
-      const prefix = location.pathname.startsWith("/editor") ? "/editor" : "/admin";
-      navigate(`${prefix}/questions-add`);
-    }
+    // Keep the user on the question-view page; the edit form opens as a modal there.
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -458,9 +440,23 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
 
   return (
     <div>
-      {mode !== "view" && (
+      {(mode !== "view" || (mode === "view" && editingId)) && (
         <>
-      <h3 style={{ marginTop: 0 }}>{editingId ? "প্রশ্ন এডিট করুন" : "একটা প্রশ্ন যোগ করুন"}</h3>
+      <div
+        style={mode === "view" && editingId ? { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(15, 23, 42, 0.58)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } : {}}
+        onClick={mode === "view" && editingId ? (event) => { if (event.target === event.currentTarget) cancelEdit(); } : undefined}
+      >
+        <div
+          role={mode === "view" && editingId ? "dialog" : undefined}
+          aria-modal={mode === "view" && editingId ? "true" : undefined}
+          aria-label={mode === "view" && editingId ? "প্রশ্ন এডিট করুন" : undefined}
+          style={mode === "view" && editingId ? { background: "var(--card, #fff)", color: "var(--text, #172033)", width: "min(900px, 100%)", maxHeight: "90vh", overflowY: "auto", borderRadius: 16, padding: 24, boxShadow: "0 24px 80px rgba(0,0,0,.28)" } : {}}
+        >
+          {mode === "view" && editingId && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <h3 style={{ marginTop: 0 }}>প্রশ্ন এডিট করুন</h3>
+            <button type="button" className="cta-ghost" onClick={cancelEdit}>বন্ধ করুন ✕</button>
+          </div>}
+      <h3 style={{ marginTop: 0, display: mode === "view" ? "none" : undefined }}>{editingId ? "প্রশ্ন এডিট করুন" : "একটা প্রশ্ন যোগ করুন"}</h3>
       {editingId && (
         <div className="admin-msg" style={{ background: "var(--indigo-soft)", color: "var(--indigo-deep)" }}>
           ✏️ এডিট মোড — পরিবর্তন শেষে Save চাপুন, অথবা Cancel করুন
@@ -545,7 +541,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       <button className="cta-primary" onClick={saveQuestion}>{editingId ? "✓ Save করুন" : "+ প্রশ্ন যোগ করুন"}</button>
       {editingId && <button className="cta-ghost" onClick={cancelEdit} style={{ marginLeft: 8 }}>Cancel</button>}
 
-      <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
+      {mode !== "view" && <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />}
+        </div>
+      </div>
 
         </>
       )}
