@@ -155,6 +155,22 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
     flash("ok", labels[field] || "আপডেট হয়েছে");
   }
 
+  async function toggleBookVerified(question) {
+    const value = !question.book_verified;
+    const { error } = await supabase
+      .from("questions")
+      .update({ book_verified: value })
+      .eq("id", question.id);
+    if (error) {
+      flash("err", error.message);
+      return;
+    }
+    setQuestions(current => current.map(item =>
+      item.id === question.id ? { ...item, book_verified: value } : item
+    ));
+    flash("ok", value ? "বইয়ের সঙ্গে প্রশ্নটি মিলানো হয়েছে" : "প্রশ্নটি মিলানো হয়নি হিসেবে রাখা হয়েছে");
+  }
+
   const filteredQuestions = questions.filter((q) => {
     if (filterSubject && q.subject_id !== filterSubject) return false;
     if (filterExam && q.exam_id !== filterExam) return false;
@@ -843,6 +859,25 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                 <td className="admin-row-actions">
                   <button className="cta-small" onClick={() => startEdit(q)}>এডিট</button>
                   <button className="cta-danger" onClick={() => deleteQuestion(q.id)}>মুছুন</button>
+                  <button
+                    type="button"
+                    onClick={() => toggleBookVerified(q)}
+                    title={q.book_verified ? "বইয়ের সঙ্গে মিলানো হয়েছে — ক্লিক করলে আবার বাকি হবে" : "বইয়ের সঙ্গে মিলিয়ে নিলে ক্লিক করে সবুজ করুন"}
+                    aria-label={q.book_verified ? "বইয়ের সঙ্গে মিলানো হয়েছে" : "বইয়ের সঙ্গে এখনও মিলানো হয়নি"}
+                    style={{
+                      border: "1px solid",
+                      borderColor: q.book_verified ? "#15803d" : "#dc2626",
+                      background: q.book_verified ? "#16a34a" : "#dc2626",
+                      color: "#fff",
+                      borderRadius: 8,
+                      padding: "7px 10px",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {q.book_verified ? "✓ মিলেছে" : "মেলানো বাকি"}
+                  </button>
                 </td>
               </tr>
             ))}

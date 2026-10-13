@@ -89,7 +89,8 @@ create table if not exists public.questions (
   correct_option text check (correct_option is null or correct_option in ('a','b','c','d')),
   short_answer text,
   explanation text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  book_verified boolean not null default false
 );
 
 -- 6. PRACTICE SESSIONS (private — one row per quiz attempt, owned by one user)
