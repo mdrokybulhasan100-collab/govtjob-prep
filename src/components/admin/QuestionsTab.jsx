@@ -450,7 +450,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
     <div>
       {(mode !== "view" || (mode === "view" && editingId)) && (
         <>
-      {mode !== "view" && <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
+      <div style={mode !== "view" ? { border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" } : {}}>
       <div
         style={mode === "view" && editingId ? { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(15, 23, 42, 0.58)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } : {}}
         onClick={mode === "view" && editingId ? (event) => { if (event.target === event.currentTarget) cancelEdit(); } : undefined}
