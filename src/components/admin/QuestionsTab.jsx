@@ -77,6 +77,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   const [loadingList, setLoadingList] = useState(true);
   const [filterSubject, setFilterSubject] = useState("");
   const [filterExam, setFilterExam] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const topicsForSubject = topics.filter((t) => t.subject_id === form.subject_id);
   const isShort = form.question_type === "short";
@@ -159,6 +161,12 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredQuestions.length / pageSize));
+  const paginatedQuestions = filteredQuestions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setCurrentPage(1); }, [filterSubject, filterExam, pageSize]);
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [currentPage, totalPages]);
+
   function startEdit(q) {
     setEditingId(q.id);
     setForm({
@@ -176,7 +184,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       explanation: q.explanation || ""
     });
     // Keep the user on the question-view page; the edit form opens as a modal there.
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Keep the current scroll position; the modal opens over the question list.
   }
 
   function cancelEdit() {
@@ -550,7 +558,15 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
 
       {mode !== "add" && (
         <>
-      <h3 style={{ marginTop: 0 }}>যোগ করা প্রশ্নসমূহ ({filteredQuestions.length})</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <h3 style={{ marginTop: 0 }}>যোগ করা প্রশ্নসমূহ ({filteredQuestions.length})</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <label htmlFor="question-page-size">প্রতি পেজে প্রশ্ন</label>
+          <select id="question-page-size" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ width: 100 }}>
+            {[10, 20, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+          </select>
+        </div>
+      </div>
       <div className="admin-form">
         <div className="form-field"><label>বিষয় দিয়ে ফিল্টার</label>
           <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
@@ -585,7 +601,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
             </tr>
           </thead>
           <tbody>
-            {filteredQuestions.map((q) => (
+            {paginatedQuestions.map((q) => (
               <tr key={q.id}>
                 <td>{q.question_type === "short" ? "Short" : "MCQ"}</td>
                 <td style={{ maxWidth: 280 }}>{q.question_text}</td>
@@ -625,6 +641,16 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
             ))}
           </tbody>
         </table>
+      )}
+      {!loadingList && filteredQuestions.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
+          <span className="mode-desc">{(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredQuestions.length)} / {filteredQuestions.length}টি প্রশ্ন</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button className="cta-ghost" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>আগের পেজ</button>
+            <span>পেজ {currentPage} / {totalPages}</span>
+            <button className="cta-ghost" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>পরের পেজ</button>
+          </div>
+        </div>
       )}
 
       <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
