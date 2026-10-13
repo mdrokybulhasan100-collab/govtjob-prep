@@ -448,6 +448,211 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
 
   return (
     <div>
+      {mode !== "view" && (
+        <>
+      <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
+      <h3>📷 বইয়ের ছবি থেকে প্রশ্ন যোগ করুন</h3>
+      <p className="mode-desc">
+        বইয়ের পরিষ্কার page-এর ছবি দিন। AI শুধু প্রশ্ন, অপশন ও উত্তর extract করবে।
+        <strong> Extract হওয়ার পরে প্রতিটি প্রশ্ন আলাদাভাবে যাচাই করে বিষয়, টপিক, প্রশ্নপত্র ও প্রশ্নের ধরন সেট করতে পারবেন।</strong>
+        সর্বোচ্চ ১০টি page একসাথে নেওয়া যাবে।
+      </p>
+      <div className="form-field">
+        <label>বইয়ের পেজের ছবি</label>
+        <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleBookImages} />
+      </div>
+      {bookImages.length > 0 && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "12px 0" }}>
+          {bookImages.map((img, i) => (
+            <div key={i} style={{ width: 110, fontSize: 12 }}>
+              <div style={{ position: "relative", width: 100, height: 130 }}>
+                <img
+                  src={img.previewUrl}
+                  alt={`পৃষ্ঠা ${i + 1}`}
+                  style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeBookImage(i)}
+                  aria-label={`পৃষ্ঠা ${i + 1} মুছে ফেলুন`}
+                  title="এই ছবি মুছে ফেলুন"
+                  style={{
+                    position: "absolute",
+                    top: -8,
+                    right: -8,
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    border: "1px solid #fff",
+                    background: "#ef4444",
+                    color: "#fff",
+                    fontSize: 17,
+                    lineHeight: "20px",
+                    padding: 0,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(0,0,0,.2)"
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div>পৃষ্ঠা {i + 1}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+        <button className="cta-primary" disabled={extracting || !bookImages.length} onClick={extractFromBook}>
+          {extracting ? "AI দিয়ে প্রশ্ন বের হচ্ছে..." : "📷 ছবি থেকে প্রশ্ন Extract করুন"}
+        </button>
+        {extractedQuestions.length > 0 && (
+          <button className="cta-primary" disabled={uploading} onClick={uploadExtractedQuestions}>
+            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি প্রশ্ন Upload করুন`}
+          </button>
+        )}
+      </div>
+
+      {extractedQuestions.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+            <div>
+              <h4 style={{ margin: 0 }}>Extracted প্রশ্ন ({extractedQuestions.length})</h4>
+              <p className="mode-desc" style={{ margin: "5px 0 0" }}>
+                প্রতিটি প্রশ্নের metadata আলাদাভাবে সেট করুন। তারপর সবগুলো একসাথে database-এ upload হবে।
+              </p>
+            </div>
+          </div>
+
+          {extractedQuestions.map((q, i) => {
+            const questionTopics = topics.filter((t) => t.subject_id === q.subject_id);
+            const isExtractedShort = q.question_type === "short";
+            return (
+              <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 16, marginBottom: 14, background: "var(--surface, #fff)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 12 }}>
+                  <strong>#{i + 1} · পৃষ্ঠা {q._sourcePage}</strong>
+                  <button className="cta-danger" onClick={() => removeExtracted(i)}>বাদ দিন</button>
+                </div>
+
+                <div className="admin-form">
+                  <div className="form-field">
+                    <label>প্রশ্নের ধরন</label>
+                    <select
+                      value={q.question_type}
+                      onChange={(e) => {
+                        const nextType = e.target.value;
+                        setExtractedQuestions((prev) => prev.map((item, idx) => idx === i ? {
+                          ...item,
+                          question_type: nextType,
+                          ...(nextType === "short" ? { option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "" } : { short_answer: "" })
+                        } : item));
+                      }}
+                    >
+                      <option value="mcq">MCQ (৪টা অপশন)</option>
+                      <option value="short">Short Answer</option>
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label>বিষয়</label>
+                    <select
+                      value={q.subject_id || ""}
+                      onChange={(e) => setExtractedQuestions((prev) => prev.map((item, idx) => idx === i ? { ...item, subject_id: e.target.value, topic_id: "" } : item))}
+                    >
+                      <option value="">বিষয় নির্বাচন করুন</option>
+                      {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name_bn}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label>টপিক</label>
+                    <select
+                      value={q.topic_id || ""}
+                      onChange={(e) => updateExtracted(i, "topic_id", e.target.value)}
+                      disabled={!q.subject_id}
+                    >
+                      <option value="">টপিক নির্বাচন করুন</option>
+                      {questionTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name_bn}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label>প্রশ্নপত্র</label>
+                    <select value={q.exam_id || ""} onChange={(e) => updateExtracted(i, "exam_id", e.target.value)}>
+                      <option value="">প্রশ্নপত্র নির্বাচন করুন</option>
+                      {exams.map((exam) => <option key={exam.id} value={exam.id}>{exam.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>প্রশ্ন</label>
+                  <textarea value={q.question_text} onChange={(e) => updateExtracted(i, "question_text", e.target.value)} />
+                </div>
+
+                {isExtractedShort ? (
+                  <div className="admin-form">
+                    <div className="form-field">
+                      <label>সঠিক উত্তর</label>
+                      <input value={q.short_answer || ""} onChange={(e) => updateExtracted(i, "short_answer", e.target.value)} />
+                    </div>
+                    <div className="form-field">
+                      <label>ব্যাখ্যা (ঐচ্ছিক)</label>
+                      <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="admin-form">
+                      {['a','b','c','d'].map((o) => (
+                        <div className="form-field" key={o}>
+                          <label>অপশন {o.toUpperCase()}</label>
+                          <input value={q[`option_${o}`] || ""} onChange={(e) => updateExtracted(i, `option_${o}`, e.target.value)} />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="admin-form">
+                      <div className="form-field" style={{ maxWidth: 180 }}>
+                        <label>সঠিক উত্তর</label>
+                        <select value={q.correct_option || ""} onChange={(e) => updateExtracted(i, "correct_option", e.target.value)}>
+                          <option value="">নির্বাচন করুন</option>
+                          <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <label>ব্যাখ্যা (ঐচ্ছিক)</label>
+                        <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+        </div>
+      )}
+
+      <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
+      </div>
+
+      <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
+      <h3>Bulk Upload (JSON)</h3>
+      <p className="mode-desc">
+        একসাথে অনেক প্রশ্ন যোগ করতে নিচের ফরম্যাটে JSON বসান। <code>question_type</code> না দিলে
+        ধরে নেওয়া হবে <code>mcq</code>। <code>subject_slug</code> অবশ্যই Subjects ট্যাবে থাকা কোনো
+        slug-এর সাথে মিলতে হবে। <code>topic_name_en</code> ও <code>exam_slug</code> ঐচ্ছিক।
+      </p>
+      <div className="form-field">
+        <textarea
+          style={{ minHeight: 260 }}
+          value={jsonText}
+          onChange={(e) => setJsonText(e.target.value)}
+        />
+      </div>
+      <button className="cta-primary" disabled={uploading} onClick={bulkUpload} style={{ marginTop: 10 }}>
+        {uploading ? "আপলোড হচ্ছে..." : "JSON আপলোড করুন"}
+      </button>
+      </div>
+        </>
+      )}
+
       {(mode !== "view" || (mode === "view" && editingId)) && (
         <>
       <div style={mode !== "view" ? { border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" } : {}}>
@@ -660,210 +865,6 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
         </>
       )}
 
-      {mode !== "view" && (
-        <>
-      <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
-      <h3>📷 বইয়ের ছবি থেকে প্রশ্ন যোগ করুন</h3>
-      <p className="mode-desc">
-        বইয়ের পরিষ্কার page-এর ছবি দিন। AI শুধু প্রশ্ন, অপশন ও উত্তর extract করবে।
-        <strong> Extract হওয়ার পরে প্রতিটি প্রশ্ন আলাদাভাবে যাচাই করে বিষয়, টপিক, প্রশ্নপত্র ও প্রশ্নের ধরন সেট করতে পারবেন।</strong>
-        সর্বোচ্চ ১০টি page একসাথে নেওয়া যাবে।
-      </p>
-      <div className="form-field">
-        <label>বইয়ের পেজের ছবি</label>
-        <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handleBookImages} />
-      </div>
-      {bookImages.length > 0 && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "12px 0" }}>
-          {bookImages.map((img, i) => (
-            <div key={i} style={{ width: 110, fontSize: 12 }}>
-              <div style={{ position: "relative", width: 100, height: 130 }}>
-                <img
-                  src={img.previewUrl}
-                  alt={`পৃষ্ঠা ${i + 1}`}
-                  style={{ width: 100, height: 130, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeBookImage(i)}
-                  aria-label={`পৃষ্ঠা ${i + 1} মুছে ফেলুন`}
-                  title="এই ছবি মুছে ফেলুন"
-                  style={{
-                    position: "absolute",
-                    top: -8,
-                    right: -8,
-                    width: 24,
-                    height: 24,
-                    borderRadius: "50%",
-                    border: "1px solid #fff",
-                    background: "#ef4444",
-                    color: "#fff",
-                    fontSize: 17,
-                    lineHeight: "20px",
-                    padding: 0,
-                    cursor: "pointer",
-                    boxShadow: "0 2px 6px rgba(0,0,0,.2)"
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-              <div>পৃষ্ঠা {i + 1}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-        <button className="cta-primary" disabled={extracting || !bookImages.length} onClick={extractFromBook}>
-          {extracting ? "AI দিয়ে প্রশ্ন বের হচ্ছে..." : "📷 ছবি থেকে প্রশ্ন Extract করুন"}
-        </button>
-        {extractedQuestions.length > 0 && (
-          <button className="cta-primary" disabled={uploading} onClick={uploadExtractedQuestions}>
-            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি প্রশ্ন Upload করুন`}
-          </button>
-        )}
-      </div>
-
-      {extractedQuestions.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
-            <div>
-              <h4 style={{ margin: 0 }}>Extracted প্রশ্ন ({extractedQuestions.length})</h4>
-              <p className="mode-desc" style={{ margin: "5px 0 0" }}>
-                প্রতিটি প্রশ্নের metadata আলাদাভাবে সেট করুন। তারপর সবগুলো একসাথে database-এ upload হবে।
-              </p>
-            </div>
-          </div>
-
-          {extractedQuestions.map((q, i) => {
-            const questionTopics = topics.filter((t) => t.subject_id === q.subject_id);
-            const isExtractedShort = q.question_type === "short";
-            return (
-              <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 16, marginBottom: 14, background: "var(--surface, #fff)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 12 }}>
-                  <strong>#{i + 1} · পৃষ্ঠা {q._sourcePage}</strong>
-                  <button className="cta-danger" onClick={() => removeExtracted(i)}>বাদ দিন</button>
-                </div>
-
-                <div className="admin-form">
-                  <div className="form-field">
-                    <label>প্রশ্নের ধরন</label>
-                    <select
-                      value={q.question_type}
-                      onChange={(e) => {
-                        const nextType = e.target.value;
-                        setExtractedQuestions((prev) => prev.map((item, idx) => idx === i ? {
-                          ...item,
-                          question_type: nextType,
-                          ...(nextType === "short" ? { option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "" } : { short_answer: "" })
-                        } : item));
-                      }}
-                    >
-                      <option value="mcq">MCQ (৪টা অপশন)</option>
-                      <option value="short">Short Answer</option>
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label>বিষয়</label>
-                    <select
-                      value={q.subject_id || ""}
-                      onChange={(e) => setExtractedQuestions((prev) => prev.map((item, idx) => idx === i ? { ...item, subject_id: e.target.value, topic_id: "" } : item))}
-                    >
-                      <option value="">বিষয় নির্বাচন করুন</option>
-                      {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name_bn}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label>টপিক</label>
-                    <select
-                      value={q.topic_id || ""}
-                      onChange={(e) => updateExtracted(i, "topic_id", e.target.value)}
-                      disabled={!q.subject_id}
-                    >
-                      <option value="">টপিক নির্বাচন করুন</option>
-                      {questionTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.name_bn}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label>প্রশ্নপত্র</label>
-                    <select value={q.exam_id || ""} onChange={(e) => updateExtracted(i, "exam_id", e.target.value)}>
-                      <option value="">প্রশ্নপত্র নির্বাচন করুন</option>
-                      {exams.map((exam) => <option key={exam.id} value={exam.id}>{exam.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-field">
-                  <label>প্রশ্ন</label>
-                  <textarea value={q.question_text} onChange={(e) => updateExtracted(i, "question_text", e.target.value)} />
-                </div>
-
-                {isExtractedShort ? (
-                  <div className="admin-form">
-                    <div className="form-field">
-                      <label>সঠিক উত্তর</label>
-                      <input value={q.short_answer || ""} onChange={(e) => updateExtracted(i, "short_answer", e.target.value)} />
-                    </div>
-                    <div className="form-field">
-                      <label>ব্যাখ্যা (ঐচ্ছিক)</label>
-                      <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="admin-form">
-                      {['a','b','c','d'].map((o) => (
-                        <div className="form-field" key={o}>
-                          <label>অপশন {o.toUpperCase()}</label>
-                          <input value={q[`option_${o}`] || ""} onChange={(e) => updateExtracted(i, `option_${o}`, e.target.value)} />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="admin-form">
-                      <div className="form-field" style={{ maxWidth: 180 }}>
-                        <label>সঠিক উত্তর</label>
-                        <select value={q.correct_option || ""} onChange={(e) => updateExtracted(i, "correct_option", e.target.value)}>
-                          <option value="">নির্বাচন করুন</option>
-                          <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
-                        </select>
-                      </div>
-                      <div className="form-field">
-                        <label>ব্যাখ্যা (ঐচ্ছিক)</label>
-                        <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-
-        </div>
-      )}
-
-      <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
-      </div>
-
-      <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
-      <h3>Bulk Upload (JSON)</h3>
-      <p className="mode-desc">
-        একসাথে অনেক প্রশ্ন যোগ করতে নিচের ফরম্যাটে JSON বসান। <code>question_type</code> না দিলে
-        ধরে নেওয়া হবে <code>mcq</code>। <code>subject_slug</code> অবশ্যই Subjects ট্যাবে থাকা কোনো
-        slug-এর সাথে মিলতে হবে। <code>topic_name_en</code> ও <code>exam_slug</code> ঐচ্ছিক।
-      </p>
-      <div className="form-field">
-        <textarea
-          style={{ minHeight: 260 }}
-          value={jsonText}
-          onChange={(e) => setJsonText(e.target.value)}
-        />
-      </div>
-      <button className="cta-primary" disabled={uploading} onClick={bulkUpload} style={{ marginTop: 10 }}>
-        {uploading ? "আপলোড হচ্ছে..." : "JSON আপলোড করুন"}
-      </button>
-      </div>
-        </>
-      )}
     </div>
   );
 }
