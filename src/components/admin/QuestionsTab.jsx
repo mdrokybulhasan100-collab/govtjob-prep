@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { banglaToLatin } from "../../lib/utils";
@@ -77,6 +77,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   const [loadingList, setLoadingList] = useState(true);
   const [filterSubject, setFilterSubject] = useState("");
   const [filterExam, setFilterExam] = useState("");
+  const skipInitialDraftSave = useRef(true);
 
   const topicsForSubject = topics.filter((t) => t.subject_id === form.subject_id);
   const isShort = form.question_type === "short";
@@ -110,6 +111,12 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   // Persist all editable question-import state so switching tabs or an unexpected
   // page reload does not erase extracted questions/metadata.
   useEffect(() => {
+    // The first render may still contain defaults while the saved draft is being
+    // restored. Do not overwrite that draft until restoration has taken effect.
+    if (skipInitialDraftSave.current) {
+      skipInitialDraftSave.current = false;
+      return;
+    }
     safeWriteStorage(QUESTION_DRAFT_KEY, {
       extractedQuestions, form, jsonText, filterSubject, filterExam, editingId
     });
@@ -160,13 +167,12 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
   });
 
   function startEdit(q) {
-    setEditingId(q.id);
-    setForm({
+    const nextForm = {
       subject_id: q.subject_id || "",
       topic_id: q.topic_id || "",
       exam_id: q.exam_id || "",
-      question_type: q.question_type,
-      question_text: q.question_text,
+      question_type: q.question_type || "mcq",
+      question_text: q.question_text || "",
       option_a: q.option_a || "",
       option_b: q.option_b || "",
       option_c: q.option_c || "",
@@ -174,7 +180,16 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       correct_option: q.correct_option || "a",
       short_answer: q.short_answer || "",
       explanation: q.explanation || ""
+    };
+    setEditingId(q.id);
+    setForm(nextForm);
+
+    // Save synchronously before navigation because changing admin tabs unmounts
+    // this component; React effects may not run before it unmounts.
+    safeWriteStorage(QUESTION_DRAFT_KEY, {
+      extractedQuestions, form: nextForm, jsonText, filterSubject, filterExam, editingId: q.id
     });
+
     if (mode === "view") {
       const prefix = location.pathname.startsWith("/editor") ? "/editor" : "/admin";
       navigate(`${prefix}/questions-add`);
