@@ -450,6 +450,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
     <div>
       {(mode !== "view" || (mode === "view" && editingId)) && (
         <>
+      {mode !== "view" && <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
       <div
         style={mode === "view" && editingId ? { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(15, 23, 42, 0.58)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } : {}}
         onClick={mode === "view" && editingId ? (event) => { if (event.target === event.currentTarget) cancelEdit(); } : undefined}
@@ -551,6 +552,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
 
       {mode !== "view" && <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />}
         </div>
+      </div>
       </div>
 
         </>
@@ -660,6 +662,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
 
       {mode !== "view" && (
         <>
+      <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
       <h3>📷 বইয়ের ছবি থেকে প্রশ্ন যোগ করুন</h3>
       <p className="mode-desc">
         বইয়ের পরিষ্কার page-এর ছবি দিন। AI শুধু প্রশ্ন, অপশন ও উত্তর extract করবে।
@@ -710,9 +713,16 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
           ))}
         </div>
       )}
-      <button className="cta-primary" disabled={extracting || !bookImages.length} onClick={extractFromBook}>
-        {extracting ? "AI দিয়ে প্রশ্ন বের হচ্ছে..." : "📷 ছবি থেকে প্রশ্ন Extract করুন"}
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+        <button className="cta-primary" disabled={extracting || !bookImages.length} onClick={extractFromBook}>
+          {extracting ? "AI দিয়ে প্রশ্ন বের হচ্ছে..." : "📷 ছবি থেকে প্রশ্ন Extract করুন"}
+        </button>
+        {extractedQuestions.length > 0 && (
+          <button className="cta-primary" disabled={uploading} onClick={uploadExtractedQuestions}>
+            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি প্রশ্ন Upload করুন`}
+          </button>
+        )}
+      </div>
 
       {extractedQuestions.length > 0 && (
         <div style={{ marginTop: 20 }}>
@@ -828,14 +838,13 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
             );
           })}
 
-          <button className="cta-primary" disabled={uploading} onClick={uploadExtractedQuestions}>
-            {uploading ? "Database-এ যোগ হচ্ছে..." : `✓ ${extractedQuestions.length}টি প্রশ্ন Upload করুন`}
-          </button>
         </div>
       )}
 
       <hr style={{ margin: "28px 0", border: "none", borderTop: "1px solid var(--line)" }} />
+      </div>
 
+      <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" }}>
       <h3>Bulk Upload (JSON)</h3>
       <p className="mode-desc">
         একসাথে অনেক প্রশ্ন যোগ করতে নিচের ফরম্যাটে JSON বসান। <code>question_type</code> না দিলে
@@ -852,6 +861,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       <button className="cta-primary" disabled={uploading} onClick={bulkUpload} style={{ marginTop: 10 }}>
         {uploading ? "আপলোড হচ্ছে..." : "JSON আপলোড করুন"}
       </button>
+      </div>
         </>
       )}
     </div>
