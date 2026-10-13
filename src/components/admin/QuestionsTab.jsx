@@ -861,22 +861,39 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                   <button className="cta-danger" onClick={() => deleteQuestion(q.id)}>মুছুন</button>
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={Boolean(q.book_verified)}
                     onClick={() => toggleBookVerified(q)}
-                    title={q.book_verified ? "বইয়ের সঙ্গে মিলানো হয়েছে — ক্লিক করলে আবার বাকি হবে" : "বইয়ের সঙ্গে মিলিয়ে নিলে ক্লিক করে সবুজ করুন"}
+                    title={q.book_verified ? "বইয়ের সঙ্গে মিলেছে — বন্ধ করতে ক্লিক করুন" : "বইয়ের সঙ্গে মিলিয়ে নিলে চালু করুন"}
                     aria-label={q.book_verified ? "বইয়ের সঙ্গে মিলানো হয়েছে" : "বইয়ের সঙ্গে এখনও মিলানো হয়নি"}
                     style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      width: 46,
+                      height: 26,
+                      padding: 3,
                       border: "1px solid",
                       borderColor: q.book_verified ? "#15803d" : "#dc2626",
                       background: q.book_verified ? "#16a34a" : "#dc2626",
-                      color: "#fff",
-                      borderRadius: 8,
-                      padding: "7px 10px",
+                      borderRadius: 999,
                       cursor: "pointer",
-                      fontWeight: 700,
-                      whiteSpace: "nowrap"
+                      transition: "background 160ms ease, border-color 160ms ease",
+                      flexShrink: 0
                     }}
                   >
-                    {q.book_verified ? "✓ মিলেছে" : "মেলানো বাকি"}
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        display: "block",
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "#fff",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                        transform: q.book_verified ? "translateX(20px)" : "translateX(0)",
+                        transition: "transform 160ms ease"
+                      }}
+                    />
                   </button>
                 </td>
               </tr>
