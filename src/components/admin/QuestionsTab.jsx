@@ -873,7 +873,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
               <tr
                 key={q.id}
                 className={q.book_verified && !q.is_published ? "question-row-verified-unpublished" : undefined}
-                style={q.book_verified && !q.is_published ? { backgroundColor: "#fff7d6", boxShadow: "inset 4px 0 0 #d97706" } : undefined}
+                
               >
                 <td>{q.question_type === "short" ? "Short" : "MCQ"}</td>
                 <td style={{ maxWidth: 280 }}>{q.question_text}</td>
