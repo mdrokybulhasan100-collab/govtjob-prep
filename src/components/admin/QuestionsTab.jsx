@@ -873,7 +873,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
               <tr
                 key={q.id}
                 className={q.book_verified && !q.is_published ? "question-row-verified-unpublished" : undefined}
-                
+                style={q.book_verified && !q.is_published ? { backgroundColor: "#fff7d6", boxShadow: "inset 4px 0 0 #d97706" } : undefined}
               >
                 <td>{q.question_type === "short" ? "Short" : "MCQ"}</td>
                 <td style={{ maxWidth: 280 }}>{q.question_text}</td>
@@ -905,45 +905,47 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                     {q.audio_suitable ? "Audio: হ্যাঁ" : "Audio: না"}
                   </button>
                 </td>
-                <td className="admin-row-actions">
-                  <button className="cta-small" onClick={() => startEdit(q)}>এডিট</button>
-                  <button className="cta-danger" onClick={() => deleteQuestion(q.id)}>মুছুন</button>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={Boolean(q.book_verified)}
-                    onClick={() => toggleBookVerified(q)}
-                    title={q.book_verified ? "বইয়ের সঙ্গে মিলেছে — বন্ধ করতে ক্লিক করুন" : "বইয়ের সঙ্গে মিলিয়ে নিলে চালু করুন"}
-                    aria-label={q.book_verified ? "বইয়ের সঙ্গে মিলানো হয়েছে" : "বইয়ের সঙ্গে এখনও মিলানো হয়নি"}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      width: 46,
-                      height: 26,
-                      padding: 3,
-                      border: "1px solid",
-                      borderColor: q.book_verified ? "#15803d" : "#dc2626",
-                      background: q.book_verified ? "#16a34a" : "#dc2626",
-                      borderRadius: 999,
-                      cursor: "pointer",
-                      transition: "background 160ms ease, border-color 160ms ease",
-                      flexShrink: 0
-                    }}
-                  >
-                    <span
-                      aria-hidden="true"
+                <td className="admin-row-actions-cell">
+                  <div className="admin-row-actions">
+                    <button className="cta-small" onClick={() => startEdit(q)}>এডিট</button>
+                    <button className="cta-danger" onClick={() => deleteQuestion(q.id)}>মুছুন</button>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={Boolean(q.book_verified)}
+                      onClick={() => toggleBookVerified(q)}
+                      title={q.book_verified ? "বইয়ের সঙ্গে মিলেছে — বন্ধ করতে ক্লিক করুন" : "বইয়ের সঙ্গে মিলিয়ে নিলে চালু করুন"}
+                      aria-label={q.book_verified ? "বইয়ের সঙ্গে মিলানো হয়েছে" : "বইয়ের সঙ্গে এখনও মিলানো হয়নি"}
                       style={{
-                        display: "block",
-                        width: 18,
-                        height: 18,
-                        borderRadius: "50%",
-                        background: "#fff",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
-                        transform: q.book_verified ? "translateX(20px)" : "translateX(0)",
-                        transition: "transform 160ms ease"
+                        display: "inline-flex",
+                        alignItems: "center",
+                        width: 46,
+                        height: 26,
+                        padding: 3,
+                        border: "1px solid",
+                        borderColor: q.book_verified ? "#15803d" : "#dc2626",
+                        background: q.book_verified ? "#16a34a" : "#dc2626",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        transition: "background 160ms ease, border-color 160ms ease",
+                        flexShrink: 0
                       }}
-                    />
-                  </button>
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: "block",
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          background: "#fff",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                          transform: q.book_verified ? "translateX(20px)" : "translateX(0)",
+                          transition: "transform 160ms ease"
+                        }}
+                      />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
