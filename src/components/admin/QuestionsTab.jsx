@@ -34,7 +34,7 @@ const SAMPLE_JSON = `[
 const EMPTY_QUESTION_FORM = {
   subject_id: "", topic_id: "", exam_id: "", question_type: "mcq",
   question_text: "", option_a: "", option_b: "", option_c: "", option_d: "",
-  correct_option: "a", short_answer: "", explanation: ""
+  correct_option: "a", short_answer: "", explanation: "", book_name: "", book_page: ""
 };
 
 const QUESTION_DRAFT_KEY = "govtjobprep:question-import-draft:v1";
@@ -197,7 +197,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       option_d: q.option_d || "",
       correct_option: q.correct_option || "a",
       short_answer: q.short_answer || "",
-      explanation: q.explanation || ""
+      explanation: q.explanation || "",
+      book_name: q.book_name || "",
+      book_page: q.book_page == null ? "" : String(q.book_page)
     });
     // Keep the user on the question-view page; the edit form opens as a modal there.
     // Keep the current scroll position; the modal opens over the question list.
@@ -227,7 +229,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       option_c: isShort ? null : form.option_c,
       option_d: isShort ? null : form.option_d,
       correct_option: isShort ? null : form.correct_option,
-      short_answer: isShort ? form.short_answer : null
+      short_answer: isShort ? form.short_answer : null,
+      book_name: form.book_name.trim() || null,
+      book_page: form.book_page !== "" && form.book_page != null ? Number(form.book_page) : null
     };
 
     if (editingId) {
@@ -331,7 +335,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
         subject_id: "",
         topic_id: "",
         exam_id: "",
-        question_type: q.question_type === "short" ? "short" : "mcq"
+        question_type: q.question_type === "short" ? "short" : "mcq",
+        book_name: q.book_name || "",
+        book_page: q.book_page ?? ""
       })));
       flash("ok", `${all.length}টি প্রশ্ন extract হয়েছে। এখন প্রতিটি প্রশ্নের বিষয়, টপিক, প্রশ্নপত্র ও ধরন আলাদাভাবে সেট করুন।`);
     } catch (err) {
@@ -374,7 +380,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
           option_d: type === "mcq" ? q.option_d : null,
           correct_option: type === "mcq" ? q.correct_option : null,
           short_answer: type === "short" ? q.short_answer : null,
-          explanation: q.explanation || null
+          explanation: q.explanation || null,
+          book_name: q.book_name?.trim() || null,
+          book_page: q.book_page !== "" && q.book_page != null ? Number(q.book_page) : null
         });
       });
       if (!rows.length) throw new Error("Upload করার মতো valid প্রশ্ন নেই।");
@@ -441,7 +449,9 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
           option_d: type === "mcq" ? item.option_d : null,
           correct_option: type === "mcq" ? item.correct_option : null,
           short_answer: type === "short" ? item.short_answer : null,
-          explanation: item.explanation || null
+          explanation: item.explanation || null,
+          book_name: item.book_name || null,
+          book_page: item.book_page !== undefined && item.book_page !== "" ? Number(item.book_page) : null
         });
       });
 
@@ -549,6 +559,16 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                   <button className="cta-danger" onClick={() => removeExtracted(i)}>বাদ দিন</button>
                 </div>
 
+                <div className="admin-form">
+                  <div className="form-field">
+                    <label>বইয়ের নাম</label>
+                    <input value={q.book_name || ""} onChange={(e) => updateExtracted(i, "book_name", e.target.value)} placeholder="যেমন: বাংলা ব্যাকরণ" />
+                  </div>
+                  <div className="form-field" style={{ maxWidth: 180 }}>
+                    <label>বইয়ের পৃষ্ঠা নম্বর</label>
+                    <input type="number" min="1" value={q.book_page ?? q._sourcePage ?? ""} onChange={(e) => updateExtracted(i, "book_page", e.target.value)} placeholder="পৃষ্ঠা নম্বর" />
+                  </div>
+                </div>
                 <div className="admin-form">
                   <div className="form-field">
                     <label>প্রশ্নের ধরন</label>
@@ -721,6 +741,14 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       <div className="admin-form">
         <div className="form-field" style={{ minWidth: "100%" }}><label>প্রশ্ন</label>
           <textarea value={form.question_text} onChange={(e) => setForm({ ...form, question_text: e.target.value })} />
+        </div>
+      </div>
+      <div className="admin-form">
+        <div className="form-field"><label>বইয়ের নাম (ঐচ্ছিক)</label>
+          <input value={form.book_name} onChange={(e) => setForm({ ...form, book_name: e.target.value })} placeholder="যে বই থেকে প্রশ্নটি নেওয়া হয়েছে" />
+        </div>
+        <div className="form-field" style={{ maxWidth: 220 }}><label>বইয়ের পৃষ্ঠা নম্বর (ঐচ্ছিক)</label>
+          <input type="number" min="1" value={form.book_page} onChange={(e) => setForm({ ...form, book_page: e.target.value })} placeholder="যেমন: ২৫" />
         </div>
       </div>
 
