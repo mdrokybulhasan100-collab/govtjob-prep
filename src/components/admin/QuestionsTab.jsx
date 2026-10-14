@@ -752,6 +752,21 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
         <div className="form-field" style={{ maxWidth: 220 }}><label>বইয়ের পৃষ্ঠা নম্বর (ঐচ্ছিক)</label>
           <input type="number" min="1" value={form.book_page} onChange={(e) => setForm({ ...form, book_page: e.target.value })} placeholder="যেমন: ২৫" />
         </div>
+        {editingId && <div className="form-field" style={{ minWidth: 220 }}>
+          <label>বইয়ের সঙ্গে যাচাই</label>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(form.book_verified)}
+            onClick={() => setForm({ ...form, book_verified: !form.book_verified })}
+            style={{ display: "inline-flex", alignItems: "center", gap: 10, border: 0, background: "transparent", padding: "6px 0", cursor: "pointer", color: "var(--text, #172033)" }}
+          >
+            <span style={{ width: 42, height: 24, borderRadius: 999, background: form.book_verified ? "#16a34a" : "#dc2626", display: "inline-flex", alignItems: "center", padding: 3, boxSizing: "border-box", transition: "background .15s" }}>
+              <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.25)", transform: form.book_verified ? "translateX(18px)" : "translateX(0)", transition: "transform .15s" }} />
+            </span>
+            <span>{form.book_verified ? "বইয়ের সঙ্গে মিলেছে" : "এখনও যাচাই করা হয়নি"}</span>
+          </button>
+        </div>}
       </div>
 
       {isShort ? (
