@@ -35,7 +35,7 @@ const SAMPLE_JSON = `[
 const EMPTY_QUESTION_FORM = {
   subject_id: "", topic_id: "", exam_id: "", question_type: "mcq",
   question_text: "", option_a: "", option_b: "", option_c: "", option_d: "",
-  correct_option: "a", short_answer: "", explanation: "", book_name: "", book_page: ""
+  correct_option: "a", short_answer: "", explanation: "", book_name: "", book_page: "", book_verified: false
 };
 
 const QUESTION_DRAFT_KEY = "govtjobprep:question-import-draft:v1";
@@ -200,7 +200,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       short_answer: q.short_answer || "",
       explanation: q.explanation || "",
       book_name: q.book_name || "",
-      book_page: q.book_page == null ? "" : String(q.book_page)
+      book_page: q.book_page == null ? "" : String(q.book_page),
+      book_verified: Boolean(q.book_verified)
     });
     // Keep the user on the question-view page; the edit form opens as a modal there.
     // Keep the current scroll position; the modal opens over the question list.
@@ -232,7 +233,8 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       correct_option: isShort ? null : form.correct_option,
       short_answer: isShort ? form.short_answer : null,
       book_name: form.book_name.trim() || null,
-      book_page: form.book_page !== "" && form.book_page != null ? Number(form.book_page) : null
+      book_page: form.book_page !== "" && form.book_page != null ? Number(form.book_page) : null,
+      book_verified: Boolean(form.book_verified)
     };
 
     if (editingId) {
@@ -695,7 +697,6 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
       <div style={mode !== "view" ? { border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 22, background: "var(--card, #fff)" } : {}}>
       <div
         style={mode === "view" && editingId ? { position: "fixed", inset: 0, zIndex: 10000, background: "rgba(15, 23, 42, 0.58)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } : {}}
-        onClick={mode === "view" && editingId ? (event) => { if (event.target === event.currentTarget) cancelEdit(); } : undefined}
       >
         <div
           role={mode === "view" && editingId ? "dialog" : undefined}
