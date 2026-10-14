@@ -649,7 +649,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                         <label>সঠিক উত্তর</label>
                         <select value={q.correct_option || ""} onChange={(e) => updateExtracted(i, "correct_option", e.target.value)}>
                           <option value="">নির্বাচন করুন</option>
-                          <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
+                          <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option><option value="note">নোট/দ্রষ্টব্য</option>
                         </select>
                       </div>
                       <div className="form-field">
@@ -787,7 +787,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
           <div className="admin-form">
             <div className="form-field" style={{ maxWidth: 140 }}><label>সঠিক উত্তর</label>
               <select value={form.correct_option} onChange={(e) => setForm({ ...form, correct_option: e.target.value })}>
-                <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
+                <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option><option value="note">নোট/দ্রষ্টব্য</option>
               </select>
             </div>
             <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
