@@ -49,7 +49,6 @@ export default function Admin({ subjects, topics, exams, refreshAll, user, tabs,
       <div className="admin-workspace-grid">
         <aside className="admin-sidebar" aria-label="Admin navigation">
           <div className="admin-sidebar-brand">
-            <span className="admin-sidebar-brand-mark">G</span>
             <div><strong>GovtJob Prep</strong><small>ADMIN WORKSPACE</small></div>
           </div>
           <div className="admin-sidebar-label">WORKSPACE</div>
@@ -66,7 +65,6 @@ export default function Admin({ subjects, topics, exams, refreshAll, user, tabs,
           ))}
           <div className="admin-sidebar-note"><span>✦</span><div><strong>Admin workspace</strong><small>কনটেন্ট ও শিক্ষার্থী পরিচালনা করুন।</small></div></div>
           {user && <div className="admin-sidebar-user">
-            <span className="admin-sidebar-user-avatar">{(user.user_metadata?.full_name || user.email || "A").trim().charAt(0).toUpperCase()}</span>
             <span className="admin-sidebar-user-copy"><strong>{user.user_metadata?.full_name || "Admin account"}</strong><small>{user.email || "Signed in"}</small></span>
           </div>}
         </aside>
