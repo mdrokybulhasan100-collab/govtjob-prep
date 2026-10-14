@@ -1278,3 +1278,6 @@ button, input { font-family: var(--font-body); }
     white-space: nowrap;
   }
 }
+
+/* Rich text explanation editor */
+.rich-editor-wrap{border:1px solid var(--line,#dfe3ee);border-radius:10px;overflow:hidden;background:#fff;width:100%}.rich-editor-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px;border-bottom:1px solid var(--line,#dfe3ee);background:#f7f8fc}.rich-editor-toolbar button{min-width:32px;padding:5px 9px;border:1px solid #d9deeb;border-radius:6px;background:#fff;color:#28324b;cursor:pointer;font-size:12px}.rich-editor-toolbar button:hover{background:#eceeff;border-color:#8d91ff}.rich-editor{padding:10px 12px;outline:none;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}.rich-editor:empty:before{content:attr(data-placeholder);color:#9aa2b4;pointer-events:none}.rich-editor ul,.rich-editor ol,.omr-explanation ul,.omr-explanation ol{padding-left:24px}.omr-explanation p{margin:0 0 6px}.omr-explanation p:last-child{margin-bottom:0}

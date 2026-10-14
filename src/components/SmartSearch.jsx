@@ -1,3 +1,4 @@
+import { RichTextContent } from "./admin/RichTextEditor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { toBn, shuffleOptionOrder } from "../lib/utils";
@@ -39,7 +40,7 @@ export function SearchResultCard({ q, isFav, onToggleFavorite }) {
           ))}
         </div>
       )}
-      {q.explanation && <div className="search-card-explanation">💡 {q.explanation}</div>}
+      {q.explanation && <div className="search-card-explanation">💡 <RichTextContent value={q.explanation} /></div>}
     </article>
   );
 }

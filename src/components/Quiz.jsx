@@ -1,3 +1,4 @@
+import { RichTextContent } from "./admin/RichTextEditor";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { toBn, banglaToLatin } from "../lib/utils";
@@ -252,7 +253,7 @@ export default function Quiz() {
         )}
 
         {answered && !isLiveExam && q.explanation && (
-          <div className="omr-explanation">{q.explanation}</div>
+          <RichTextContent className="omr-explanation" value={q.explanation} />
         )}
       </div>
 

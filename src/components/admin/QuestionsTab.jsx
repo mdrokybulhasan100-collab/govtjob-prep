@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { banglaToLatin } from "../../lib/utils";
+import RichTextEditor from "./RichTextEditor";
 
 const SAMPLE_JSON = `[
   {
@@ -630,7 +631,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                     </div>
                     <div className="form-field">
                       <label>ব্যাখ্যা (ঐচ্ছিক)</label>
-                      <textarea rows={3} value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                      <RichTextEditor rows={3} value={q.explanation || ""} onChange={(value) => updateExtracted(i, "explanation", value)} />
                     </div>
                   </div>
                 ) : (
@@ -653,7 +654,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                       </div>
                       <div className="form-field">
                         <label>ব্যাখ্যা (ঐচ্ছিক)</label>
-                        <textarea rows={3} value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                        <RichTextEditor rows={3} value={q.explanation || ""} onChange={(value) => updateExtracted(i, "explanation", value)} />
                       </div>
                     </div>
                   </>
@@ -772,7 +773,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
             )}
           </div>
           <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
-            <textarea rows={3} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+            <RichTextEditor rows={3} value={form.explanation} onChange={(value) => setForm({ ...form, explanation: value })} />
           </div>
         </div>
       ) : (
@@ -790,7 +791,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
               </select>
             </div>
             <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
-              <textarea rows={3} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+              <RichTextEditor rows={3} value={form.explanation} onChange={(value) => setForm({ ...form, explanation: value })} />
             </div>
           </div>
         </>

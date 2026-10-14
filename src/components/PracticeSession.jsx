@@ -1,3 +1,4 @@
+import { RichTextContent } from "./admin/RichTextEditor";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { toBn } from "../lib/utils";
@@ -125,7 +126,7 @@ export default function PracticeSession() {
         )}
 
         {(isShort || picked) && q.explanation && (
-          <div className="omr-explanation">{q.explanation}</div>
+          <RichTextContent className="omr-explanation" value={q.explanation} />
         )}
 
         {(isShort || picked) && (
