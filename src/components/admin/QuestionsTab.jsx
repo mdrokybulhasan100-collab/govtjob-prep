@@ -630,7 +630,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                     </div>
                     <div className="form-field">
                       <label>ব্যাখ্যা (ঐচ্ছিক)</label>
-                      <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                      <textarea rows={3} value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
                     </div>
                   </div>
                 ) : (
@@ -653,7 +653,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
                       </div>
                       <div className="form-field">
                         <label>ব্যাখ্যা (ঐচ্ছিক)</label>
-                        <input value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
+                        <textarea rows={3} value={q.explanation || ""} onChange={(e) => updateExtracted(i, "explanation", e.target.value)} />
                       </div>
                     </div>
                   </>
@@ -772,7 +772,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
             )}
           </div>
           <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
-            <input value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+            <textarea rows={3} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
           </div>
         </div>
       ) : (
@@ -790,7 +790,7 @@ export default function QuestionsTab({ subjects, topics, exams, flash, mode = "a
               </select>
             </div>
             <div className="form-field" style={{ minWidth: 240 }}><label>ব্যাখ্যা (ঐচ্ছিক)</label>
-              <input value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+              <textarea rows={3} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
             </div>
           </div>
         </>
